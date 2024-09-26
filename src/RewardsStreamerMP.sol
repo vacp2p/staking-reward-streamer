@@ -194,16 +194,23 @@ contract RewardsStreamerMP is ReentrancyGuard {
     }
 
     function updateUserMP(address userAddress) internal {
-        UserInfo storage user = users[userAddress];
+        uint256 accruedMP = _getUserUnrealizedAccruedMP(userAddress);
 
+        UserInfo storage user = users[userAddress];
+        user.lastMPUpdateTime = block.timestamp;
+        user.userPotentialMP -= accruedMP;
+        user.userMP += accruedMP;
+    }
+
+    function _getUserUnrealizedAccruedMP(address userAddress) internal view returns (uint256) {
+        UserInfo storage user = users[userAddress];
         if (user.userPotentialMP == 0 || user.stakedBalance == 0) {
-            user.lastMPUpdateTime = block.timestamp;
-            return;
+            return 0;
         }
 
         uint256 timeDiff = block.timestamp - user.lastMPUpdateTime;
         if (timeDiff == 0) {
-            return;
+            return 0;
         }
 
         uint256 accruedMP = (timeDiff * user.stakedBalance * MP_RATE_PER_YEAR) / (365 days * SCALE_FACTOR);
@@ -212,10 +219,21 @@ contract RewardsStreamerMP is ReentrancyGuard {
             accruedMP = user.userPotentialMP;
         }
 
-        user.userPotentialMP -= accruedMP;
-        user.userMP += accruedMP;
+        return accruedMP;
+    }
 
-        user.lastMPUpdateTime = block.timestamp;
+    function getUserUnrealizedAccruedMP(address userAddress) external view returns (uint256) {
+        return _getUserUnrealizedAccruedMP(userAddress);
+    }
+
+    function getUserTotalMP(address userAddress) external view returns (uint256) {
+        UserInfo storage user = users[userAddress];
+        return user.userMP + _getUserUnrealizedAccruedMP(userAddress);
+    }
+
+    function getUserTotalBalance(address userAddress) external view returns (uint256) {
+        UserInfo storage user = users[userAddress];
+        return user.stakedBalance + user.userMP + _getUserUnrealizedAccruedMP(userAddress);
     }
 
     function calculateUserRewards(address userAddress) public view returns (uint256) {

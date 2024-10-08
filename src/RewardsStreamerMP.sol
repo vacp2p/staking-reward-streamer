@@ -4,23 +4,22 @@ pragma solidity ^0.8.26;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-// Rewards Streamer with Multiplier Points
-contract RewardsStreamerMP is ReentrancyGuard {
-    error StakingManager__AmountCannotBeZero();
-    error StakingManager__TransferFailed();
-    error StakingManager__InsufficientBalance();
-    error StakingManager__InvalidLockingPeriod();
-    error StakingManager__CannotRestakeWithLockedFunds();
-    error StakingManager__TokensAreLocked();
+import { TrustedCodehashAccess } from "./access/TrustedCodehashAccess.sol";
+import { IStakeManager } from "./IStakeManager.sol";
 
-    IERC20 public immutable STAKING_TOKEN;
+// Rewards Streamer with Multiplier Points
+contract RewardsStreamerMP is IStakeManager, TrustedCodehashAccess, ReentrancyGuard {
+    error StakeManager__TransferFailed();
+    error StakeManager__CannotRestakeWithLockedFunds();
+
+    IERC20 public immutable STAKE_TOKEN;
     IERC20 public immutable REWARD_TOKEN;
 
     uint256 public constant SCALE_FACTOR = 1e18;
-    uint256 public constant MP_RATE_PER_YEAR = 1e18;
+    uint256 public constant MP_APY = 1e18;
 
-    uint256 public constant MIN_LOCKING_PERIOD = 90 days;
-    uint256 public constant MAX_LOCKING_PERIOD = 4 * 365 days;
+    uint256 public constant MIN_LOCKUP_PERIOD = 90 days;
+    uint256 public constant MAX_LOCKUP_PERIOD = 4 * 365 days;
     uint256 public constant MAX_MULTIPLIER = 4;
 
     uint256 public totalStaked;
@@ -42,18 +41,18 @@ contract RewardsStreamerMP is ReentrancyGuard {
     mapping(address account => UserInfo data) public users;
 
     constructor(address _stakingToken, address _rewardToken) {
-        STAKING_TOKEN = IERC20(_stakingToken);
+        STAKE_TOKEN = IERC20(_stakingToken);
         REWARD_TOKEN = IERC20(_rewardToken);
         lastMPUpdatedTime = block.timestamp;
     }
 
-    function stake(uint256 amount, uint256 lockPeriod) external nonReentrant {
-        if (amount == 0) {
-            revert StakingManager__AmountCannotBeZero();
+    function stake(uint256 _amount, uint256 _seconds) external onlyTrustedCodehash nonReentrant {
+        if (_amount == 0) {
+            revert StakeManager__StakeIsTooLow();
         }
 
-        if (lockPeriod != 0 && (lockPeriod < MIN_LOCKING_PERIOD || lockPeriod > MAX_LOCKING_PERIOD)) {
-            revert StakingManager__InvalidLockingPeriod();
+        if (_seconds != 0 && (_seconds < MIN_LOCKUP_PERIOD || _seconds > MAX_LOCKUP_PERIOD)) {
+            revert StakeManager__InvalidLockTime();
         }
 
         _updateGlobalState();
@@ -61,7 +60,7 @@ contract RewardsStreamerMP is ReentrancyGuard {
 
         UserInfo storage user = users[msg.sender];
         if (user.lockUntil != 0 && user.lockUntil > block.timestamp) {
-            revert StakingManager__CannotRestakeWithLockedFunds();
+            revert StakeManager__CannotRestakeWithLockedFunds();
         }
 
         uint256 userRewards = calculateUserRewards(msg.sender);
@@ -69,23 +68,23 @@ contract RewardsStreamerMP is ReentrancyGuard {
             distributeRewards(msg.sender, userRewards);
         }
 
-        bool success = STAKING_TOKEN.transferFrom(msg.sender, address(this), amount);
+        bool success = STAKE_TOKEN.transferFrom(msg.sender, address(this), _amount);
         if (!success) {
-            revert StakingManager__TransferFailed();
+            revert StakeManager__TransferFailed();
         }
 
-        user.stakedBalance += amount;
-        totalStaked += amount;
+        user.stakedBalance += _amount;
+        totalStaked += _amount;
 
-        uint256 initialMP = amount;
-        uint256 userPotentialMP = amount * MAX_MULTIPLIER;
+        uint256 initialMP = _amount;
+        uint256 userPotentialMP = _amount * MAX_MULTIPLIER;
 
-        if (lockPeriod != 0) {
-            uint256 lockMultiplier = (lockPeriod * MAX_MULTIPLIER * SCALE_FACTOR) / MAX_LOCKING_PERIOD;
+        if (_seconds != 0) {
+            uint256 lockMultiplier = (_seconds * MAX_MULTIPLIER * SCALE_FACTOR) / MAX_LOCKUP_PERIOD;
             lockMultiplier = lockMultiplier / SCALE_FACTOR;
-            initialMP += (amount * lockMultiplier);
-            userPotentialMP += (amount * lockMultiplier);
-            user.lockUntil = block.timestamp + lockPeriod;
+            initialMP += (_amount * lockMultiplier);
+            userPotentialMP += (_amount * lockMultiplier);
+            user.lockUntil = block.timestamp + _seconds;
         } else {
             user.lockUntil = 0;
         }
@@ -100,14 +99,14 @@ contract RewardsStreamerMP is ReentrancyGuard {
         user.lastMPUpdateTime = block.timestamp;
     }
 
-    function unstake(uint256 amount) external nonReentrant {
+    function unstake(uint256 _amount) external onlyTrustedCodehash nonReentrant {
         UserInfo storage user = users[msg.sender];
-        if (amount > user.stakedBalance) {
-            revert StakingManager__InsufficientBalance();
+        if (_amount > user.stakedBalance) {
+            revert StakeManager__InsufficientFunds();
         }
 
         if (block.timestamp < user.lockUntil) {
-            revert StakingManager__TokensAreLocked();
+            revert StakeManager__FundsLocked();
         }
 
         _updateGlobalState();
@@ -119,10 +118,10 @@ contract RewardsStreamerMP is ReentrancyGuard {
         }
 
         uint256 previousStakedBalance = user.stakedBalance;
-        user.stakedBalance -= amount;
-        totalStaked -= amount;
+        user.stakedBalance -= _amount;
+        totalStaked -= _amount;
 
-        uint256 amountRatio = (amount * SCALE_FACTOR) / previousStakedBalance;
+        uint256 amountRatio = (_amount * SCALE_FACTOR) / previousStakedBalance;
         uint256 mpToReduce = (user.userMP * amountRatio) / SCALE_FACTOR;
         uint256 potentialMPToReduce = (user.userPotentialMP * amountRatio) / SCALE_FACTOR;
 
@@ -131,12 +130,35 @@ contract RewardsStreamerMP is ReentrancyGuard {
         totalMP -= mpToReduce;
         potentialMP -= potentialMPToReduce;
 
-        bool success = STAKING_TOKEN.transfer(msg.sender, amount);
+        bool success = STAKE_TOKEN.transfer(msg.sender, _amount);
         if (!success) {
-            revert StakingManager__TransferFailed();
+            revert StakeManager__TransferFailed();
         }
 
         user.userRewardIndex = rewardIndex;
+    }
+
+    function lock(uint256 _secondsIncrease) external onlyTrustedCodehash {
+        //TODO: increase lock time
+        revert("Not implemented");
+    }
+
+    function exit() external returns (bool _leaveAccepted) {
+        if (!isTrustedCodehash(msg.sender.codehash)) {
+            //case owner removed access from a class of StakeVault,. they might exit
+            delete user[msg.sender];
+            return true;
+        } else {
+            //TODO: handle other cases
+            //TODO: handle update/migration case
+            //TODO: handle emergency exit
+            revert("Not implemented");
+        }
+    }
+
+    function acceptUpdate() external onlyTrustedCodehash returns (address _migrated) {
+        //TODO: handle update/migration
+        revert("Not implemented");
     }
 
     function _updateGlobalState() internal {
@@ -160,7 +182,7 @@ contract RewardsStreamerMP is ReentrancyGuard {
             return;
         }
 
-        uint256 accruedMP = (timeDiff * totalStaked * MP_RATE_PER_YEAR) / (365 days * SCALE_FACTOR);
+        uint256 accruedMP = calculateMP(totalStaked, timeDiff);
         if (accruedMP > potentialMP) {
             accruedMP = potentialMP;
         }
@@ -193,8 +215,8 @@ contract RewardsStreamerMP is ReentrancyGuard {
         }
     }
 
-    function updateUserMP(address userAddress) internal {
-        UserInfo storage user = users[userAddress];
+    function updateUserMP(address _vault) internal {
+        UserInfo storage user = users[_vault];
 
         if (user.userPotentialMP == 0 || user.stakedBalance == 0) {
             user.lastMPUpdateTime = block.timestamp;
@@ -206,7 +228,7 @@ contract RewardsStreamerMP is ReentrancyGuard {
             return;
         }
 
-        uint256 accruedMP = (timeDiff * user.stakedBalance * MP_RATE_PER_YEAR) / (365 days * SCALE_FACTOR);
+        uint256 accruedMP = calculateMP(user.stakedBalance, timeDiff);
 
         if (accruedMP > user.userPotentialMP) {
             accruedMP = user.userPotentialMP;
@@ -218,8 +240,8 @@ contract RewardsStreamerMP is ReentrancyGuard {
         user.lastMPUpdateTime = block.timestamp;
     }
 
-    function calculateUserRewards(address userAddress) public view returns (uint256) {
-        UserInfo storage user = users[userAddress];
+    function calculateUserRewards(address _vault) public view returns (uint256) {
+        UserInfo storage user = users[_vault];
         uint256 userWeight = user.stakedBalance + user.userMP;
         uint256 deltaRewardIndex = rewardIndex - user.userRewardIndex;
         return (userWeight * deltaRewardIndex) / SCALE_FACTOR;
@@ -236,19 +258,35 @@ contract RewardsStreamerMP is ReentrancyGuard {
 
         bool success = REWARD_TOKEN.transfer(to, amount);
         if (!success) {
-            revert StakingManager__TransferFailed();
+            revert StakeManager__TransferFailed();
         }
     }
 
-    function getStakedBalance(address userAddress) external view returns (uint256) {
-        return users[userAddress].stakedBalance;
+    function calculateMP(uint256 _balance, uint256 _deltaTime) public pure returns (uint256) {
+        return (_deltaTime * _balance * MP_APY) / (365 days * SCALE_FACTOR);
     }
 
-    function getPendingRewards(address userAddress) external view returns (uint256) {
-        return calculateUserRewards(userAddress);
+    function getStakedBalance(address _vault) external view returns (uint256 _balance) {
+        return users[_vault].stakedBalance;
     }
 
-    function getUserInfo(address userAddress) external view returns (UserInfo memory) {
-        return users[userAddress];
+    function getPendingRewards(address _vault) external view returns (uint256) {
+        return calculateUserRewards(_vault);
+    }
+
+    function getUserInfo(address _vault) external view returns (UserInfo memory) {
+        return users[_vault];
+    }
+
+    function totalSupplyMinted() external view returns (uint256 _totalSupply) {
+        return totalStaked + totalMP;
+    }
+
+    function totalSupply() external view returns (uint256 _totalSupply) {
+        return totalStaked + totalMP + potentialMP;
+    }
+
+    function pendingReward() external view returns (uint256 _pendingReward) {
+        return STAKE_TOKEN().balanceOf(address(this)) - accountedRewards;
     }
 }

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Test, console } from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { MockToken } from "../mocks/MockToken.sol";
 import { NFTMetadataGeneratorSVG } from "../../src/nft-metadata-generators/NFTMetadataGeneratorSVG.sol";
 
 contract NFTMetadataGeneratorSVGTest is Test {
-    MockToken erc20Token;
-    NFTMetadataGeneratorSVG metadataGenerator;
+    MockToken private erc20Token;
+    NFTMetadataGeneratorSVG private metadataGenerator;
 
-    address alice = makeAddr("alice");
+    address private alice = makeAddr("alice");
 
     function setUp() public {
         erc20Token = new MockToken("Test", "TEST");
@@ -23,6 +23,7 @@ contract NFTMetadataGeneratorSVGTest is Test {
     function testGenerateMetadata() public view {
         string memory expectedName = "XPNFT Token 0x328809bc894f92807417d2dad6b7c998c1afdac6";
         string memory expectedDescription =
+        // solhint-disable-next-line
             "This is a XPNFT token for address 0x328809bc894f92807417d2dad6b7c998c1afdac6 with balance 10000000000000000000";
         string memory encodedImage = Base64.encode(abi.encodePacked("<svg>10</svg>"));
         string memory expectedImage = string(abi.encodePacked("data:image/svg+xml;base64,", encodedImage));

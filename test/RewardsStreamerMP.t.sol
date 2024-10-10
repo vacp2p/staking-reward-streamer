@@ -1102,6 +1102,89 @@ contract UnstakeTest is StakeTest {
         );
     }
 
+    function test_UnstakeOneAccountAndAccruedMP() public {
+        test_StakeOneAccount();
+
+        // wait for 1 year
+        uint256 currentTime = vm.getBlockTimestamp();
+        vm.warp(currentTime + (365 days));
+
+        streamer.updateGlobalState();
+        streamer.updateUserMP(alice);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: 10e18,
+                totalMP: 20e18, // total MP must have been doubled
+                totalMaxMP: 40e18,
+                stakingBalance: 10e18,
+                rewardBalance: 0,
+                rewardIndex: 0,
+                accountedRewards: 0
+            })
+        );
+
+        // unstake half of the tokens
+        _unstake(alice, 5e18);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: 5e18, // 10 - 5
+                totalMP: 10e18, // 20 - 10 (5 initial + 5 accrued)
+                totalMaxMP: 20e18,
+                stakingBalance: 5e18,
+                rewardBalance: 0,
+                rewardIndex: 0,
+                accountedRewards: 0
+            })
+        );
+    }
+
+    function test_UnstakeOneAccountWithLockUpAndAccruedMP() public {
+        test_StakeOneAccountWithMinLockUp();
+
+        uint256 stakeAmount = 10e18;
+        uint256 lockUpPeriod = streamer.MIN_LOCKING_PERIOD();
+        // 10e18 is what's used in `test_StakeOneAccountWithMinLockUp`
+        uint256 expectedBonusMP = _calculateBonusMP(stakeAmount, lockUpPeriod);
+
+        // wait for 1 year
+        uint256 currentTime = vm.getBlockTimestamp();
+        vm.warp(currentTime + (365 days));
+
+        streamer.updateGlobalState();
+        streamer.updateUserMP(alice);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: stakeAmount,
+                totalMP: (stakeAmount + expectedBonusMP) + stakeAmount, // we do `+ stakeAmount` we've accrued
+                    // `stakeAmount` after 1 year
+                totalMaxMP: stakeAmount * streamer.MAX_MULTIPLIER() + expectedBonusMP,
+                stakingBalance: 10e18,
+                rewardBalance: 0,
+                rewardIndex: 0,
+                accountedRewards: 0
+            })
+        );
+
+        // unstake half of the tokens
+        _unstake(alice, 5e18);
+        expectedBonusMP = _calculateBonusMP(5e18, lockUpPeriod);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: 5e18,
+                totalMP: (5e18 + expectedBonusMP) + 5e18,
+                totalMaxMP: 5e18 * streamer.MAX_MULTIPLIER() + expectedBonusMP,
+                stakingBalance: 5e18,
+                rewardBalance: 0,
+                rewardIndex: 0,
+                accountedRewards: 0
+            })
+        );
+    }
+
     function test_UnstakeOneAccountAndRewards() public {
         test_StakeOneAccountAndRewards();
 

@@ -28,6 +28,23 @@
 | updateGlobalState                                    | 30008           | 52396  | 49622  | 80335  | 4       |
 
 
+| src/XPToken.sol:XPToken contract |                 |       |        |       |         |
+|----------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                  | Deployment Size |       |        |       |         |
+| 725645                           | 3153            |       |        |       |         |
+| Function Name                    | min             | avg   | median | max   | # calls |
+| addXPProvider                    | 23968           | 57184 | 51091  | 68191 | 18      |
+| allowance                        | 488             | 488   | 488    | 488   | 1       |
+| approve                          | 390             | 390   | 390    | 390   | 1       |
+| balanceOf                        | 8808            | 14560 | 11066  | 23808 | 3       |
+| getXPProviders                   | 1033            | 3286  | 3286   | 5539  | 2       |
+| removeXPProvider                 | 23665           | 28074 | 25780  | 34777 | 3       |
+| setTotalSupply                   | 23792           | 26266 | 26266  | 28740 | 2       |
+| totalSupply                      | 363             | 1863  | 2363   | 2363  | 4       |
+| transfer                         | 411             | 411   | 411    | 411   | 1       |
+| transferFrom                     | 521             | 521   | 521    | 521   | 1       |
+
+
 | test/mocks/MockToken.sol:MockToken contract |                 |       |        |       |         |
 |---------------------------------------------|-----------------|-------|--------|-------|---------|
 | Deployment Cost                             | Deployment Size |       |        |       |         |
@@ -37,6 +54,17 @@
 | balanceOf                                   | 561             | 1143  | 561    | 2561  | 79      |
 | mint                                        | 51284           | 58124 | 51284  | 68384 | 10      |
 | transfer                                    | 34390           | 42940 | 42940  | 51490 | 4       |
+
+
+| test/mocks/XPProviderMock.sol:XPProviderMock contract |                 |       |        |       |         |
+|-------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                       | Deployment Size |       |        |       |         |
+| 152145                                                | 489             |       |        |       |         |
+| Function Name                                         | min             | avg   | median | max   | # calls |
+| getTotalXPShares                                      | 302             | 968   | 302    | 2302  | 6       |
+| getUserXPShare                                        | 504             | 1837  | 2504   | 2504  | 6       |
+| setTotalXPShares                                      | 43632           | 43632 | 43632  | 43632 | 2       |
+| setUserXPShare                                        | 43900           | 43900 | 43900  | 43900 | 2       |
 
 
 

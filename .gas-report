@@ -37,18 +37,21 @@
 | src/XPToken.sol:XPToken contract |                 |       |        |       |         |
 |----------------------------------|-----------------|-------|--------|-------|---------|
 | Deployment Cost                  | Deployment Size |       |        |       |         |
-| 725645                           | 3153            |       |        |       |         |
+| 799398                           | 3520            |       |        |       |         |
 | Function Name                    | min             | avg   | median | max   | # calls |
-| addXPProvider                    | 23968           | 57184 | 51091  | 68191 | 18      |
-| allowance                        | 488             | 488   | 488    | 488   | 1       |
+| acceptOwnership                  | 28247           | 28247 | 28247  | 28247 | 1       |
+| addXPProvider                    | 23991           | 57207 | 51114  | 68214 | 18      |
+| allowance                        | 511             | 511   | 511    | 511   | 1       |
 | approve                          | 390             | 390   | 390    | 390   | 1       |
-| balanceOf                        | 8808            | 14560 | 11066  | 23808 | 3       |
-| getXPProviders                   | 1033            | 3286  | 3286   | 5539  | 2       |
-| removeXPProvider                 | 23665           | 28074 | 25780  | 34777 | 3       |
+| balanceOf                        | 8786            | 14538 | 11044  | 23786 | 3       |
+| getXPProviders                   | 1011            | 3264  | 3264   | 5517  | 2       |
+| owner                            | 374             | 1040  | 374    | 2374  | 3       |
+| removeXPProvider                 | 23666           | 28075 | 25781  | 34778 | 3       |
 | setTotalSupply                   | 23792           | 26266 | 26266  | 28740 | 2       |
 | totalSupply                      | 363             | 1863  | 2363   | 2363  | 4       |
-| transfer                         | 411             | 411   | 411    | 411   | 1       |
+| transfer                         | 389             | 389   | 389    | 389   | 1       |
 | transferFrom                     | 521             | 521   | 521    | 521   | 1       |
+| transferOwnership                | 47732           | 47732 | 47732  | 47732 | 1       |
 
 
 | test/mocks/MockToken.sol:MockToken contract |                 |       |        |       |         |
@@ -70,7 +73,7 @@
 | getTotalXPShares                                      | 302             | 968   | 302    | 2302  | 6       |
 | getUserXPShare                                        | 504             | 1837  | 2504   | 2504  | 6       |
 | setTotalXPShares                                      | 43632           | 43632 | 43632  | 43632 | 2       |
-| setUserXPShare                                        | 43900           | 43900 | 43900  | 43900 | 2       |
+| setUserXPShare                                        | 44128           | 44128 | 44128  | 44128 | 2       |
 
 
 

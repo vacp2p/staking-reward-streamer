@@ -41,3 +41,24 @@ invariant accountMPLessEqualAccountMaxMP(address account)
 invariant accountMPGreaterEqualAccountStakedBalance(address account)
   to_mathint(getAccountMP(account)) >= to_mathint(getAccountStakedBalance(account));
 
+rule stakingGreaterLockupTimeMeansGreaterMPs {
+
+  env e;
+  uint256 amount;
+  uint256 lockupTime1;
+  uint256 lockupTime2;
+  uint256 multiplierPointsAfter1;
+  uint256 multiplierPointsAfter2;
+
+  storage initalStorage = lastStorage;
+
+  stake(e, amount, lockupTime1);
+  multiplierPointsAfter1 = getAccountMP(e.msg.sender);
+
+  stake(e, amount, lockupTime2) at initalStorage;
+  multiplierPointsAfter2 = getAccountMP(e.msg.sender);
+
+  assert lockupTime1 >= lockupTime2 => to_mathint(multiplierPointsAfter1) >= to_mathint(multiplierPointsAfter2);
+  satisfy to_mathint(multiplierPointsAfter1) > to_mathint(multiplierPointsAfter2);
+}
+

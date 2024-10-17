@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { RewardsStreamerMP } from "./RewardsStreamerMP.sol";
+import { IStakeManager } from "./interfaces/IStakeManager.sol";
 
 /**
  * @title StakeVault
@@ -23,7 +23,7 @@ contract StakeVault is Ownable {
     //if is needed that STAKE_TOKEN to be a variable, RewardStreamerMP should be changed to check codehash and
     //StakeVault(msg.sender).STAKE_TOKEN()
     IERC20 public immutable STAKE_TOKEN;
-    RewardsStreamerMP private stakeManager;
+    IStakeManager private stakeManager;
 
     /**
      * @dev Emitted when tokens are staked.
@@ -46,8 +46,8 @@ contract StakeVault is Ownable {
      * @param _owner The address of the owner.
      * @param _stakeManager The address of the RewardStreamerMP contract.
      */
-    constructor(address _owner, RewardsStreamerMP _stakeManager) Ownable(_owner) {
-        STAKE_TOKEN = _stakeManager.STAKING_TOKEN();
+    constructor(address _owner, IStakeManager _stakeManager) Ownable(_owner) {
+        STAKE_TOKEN = _stakeManager.STAKE_TOKEN();
         stakeManager = _stakeManager;
     }
 

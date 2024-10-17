@@ -3,32 +3,32 @@ using ERC20A as staked;
 
 methods {
     function totalStaked() external returns (uint256) envfree;
-    function users(address) external returns (uint256, uint256, uint256, uint256, uint256, uint256) envfree;
+    function accounts(address) external returns (uint256, uint256, uint256, uint256, uint256, uint256) envfree;
 }
 
 ghost mathint sumOfBalances {
 	init_state axiom sumOfBalances == 0;
 }
 
-hook Sstore users[KEY address account].stakedBalance uint256 newValue (uint256 oldValue) {
+hook Sstore accounts[KEY address account].stakedBalance uint256 newValue (uint256 oldValue) {
     sumOfBalances = sumOfBalances - oldValue + newValue;
 }
 
 function getAccountMaxMP(address account) returns uint256 {
     uint256 maxMP;
-    _, _, _, maxMP, _, _ = streamer.users(account);
+    _, _, _, maxMP, _, _ = streamer.accounts(account);
     return maxMP;
 }
 
 function getAccountMP(address account) returns uint256 {
     uint256 accountMP;
-    _, _, accountMP, _, _, _ = streamer.users(account);
+    _, _, accountMP, _, _, _ = streamer.accounts(account);
     return accountMP;
 }
 
 function getAccountStakedBalance(address account) returns uint256 {
     uint256 stakedBalance;
-    stakedBalance, _, _, _, _, _ = streamer.users(account);
+    stakedBalance, _, _, _, _, _ = streamer.accounts(account);
     return stakedBalance;
 }
 

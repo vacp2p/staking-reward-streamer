@@ -16,9 +16,9 @@ contract XPTokenTest is Test {
     XPProviderMock provider1;
     XPProviderMock provider2;
 
-    function setUp() public {
+    function setUp() public virtual {
         vm.prank(owner);
-        xpToken = new XPToken(1000e18);
+        xpToken = new XPToken();
 
         provider1 = new XPProviderMock();
         provider2 = new XPProviderMock();
@@ -66,9 +66,15 @@ contract XPTokenTest is Test {
         xpToken.removeXPProvider(10);
     }
 
-    function testTotalSupply() public view {
+    function testTotalSupply() public {
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
+
+        vm.prank(owner);
+        xpToken.mint(owner, 500 ether);
+
         uint256 totalSupply = xpToken.totalSupply();
-        assertEq(totalSupply, 1000 ether);
+        assertEq(totalSupply, 3500 ether);
     }
 
     function testBalanceOfWithNoSystemTotalXP() public view {
@@ -80,34 +86,33 @@ contract XPTokenTest is Test {
     }
 
     function testBalanceOf() public {
-        provider1.setUserXPShare(alice, 100e18);
-        provider1.setTotalXPShares(1000e18);
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
 
-        provider2.setUserXPShare(alice, 200e18);
-        provider2.setTotalXPShares(2000e18);
+        provider1.setUserXPShare(alice, 1000e18);
+        provider2.setUserXPShare(alice, 2000e18);
 
-        // Expected balance calculation
-        uint256 userTotalXP = 100e18 + 200e18;
-        uint256 systemTotalXP = 1000e18 + 2000e18;
+        vm.prank(owner);
+        xpToken.mint(alice, 500e18);
 
-        uint256 expectedBalance = (xpToken.totalSupply() * userTotalXP) / systemTotalXP;
+        uint256 expectedBalance = 3500e18;
 
         uint256 balance = xpToken.balanceOf(alice);
         assertEq(balance, expectedBalance);
     }
 
-    function testSetTotalSupplyOnlyOwner() public {
-        uint256 totalSupply = xpToken.totalSupply();
-        assertEq(totalSupply, 1000e18);
+    function testMintOnlyOwner() public {
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
+        assertEq(xpToken.totalSupply(), 3000 ether);
 
         vm.prank(alice);
         vm.expectPartialRevert(Ownable.OwnableUnauthorizedAccount.selector);
-        xpToken.setTotalSupply(2000e18);
+        xpToken.mint(alice, 1000e18);
 
         vm.prank(owner);
-        xpToken.setTotalSupply(2000e18);
-        totalSupply = xpToken.totalSupply();
-        assertEq(totalSupply, 2000e18);
+        xpToken.mint(alice, 1000e18);
+        assertEq(xpToken.totalSupply(), 4000e18);
     }
 
     function testTransfersNotAllowed() public {
@@ -122,5 +127,68 @@ contract XPTokenTest is Test {
 
         uint256 allowance = xpToken.allowance(alice, bob);
         assertEq(allowance, 0);
+    }
+}
+
+contract XPTokenMintAllowanceTest is XPTokenTest {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function testMintAllowance_Available() public {
+        // 3000 external => maxSupply = 9000
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
+
+        vm.prank(owner);
+        xpToken.mint(owner, 500 ether);
+        // totalSupply = 3500
+
+        uint256 mintAllowance = xpToken.mintAllowance();
+        assertEq(mintAllowance, 5500 ether);
+    }
+
+    function testMintAllowance_NotAvailable() public {
+        // 3000 external => maxSupply = 9000
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
+
+        vm.prank(owner);
+        xpToken.mint(owner, 6000 ether);
+        // totalSupply = 9_000
+
+        uint256 mintAllowance = xpToken.mintAllowance();
+        assertEq(mintAllowance, 0);
+    }
+
+    function testMint_RevertWithAllowanceExceeded() public {
+        // 3000 external => maxSupply = 9000
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
+
+        vm.prank(owner);
+        xpToken.mint(owner, 500 ether);
+        // totalSupply = 3500
+        // allowed to mint 5500
+
+        vm.prank(owner);
+        vm.expectRevert(XPToken.XPToken__MintAllowanceExceeded.selector);
+        xpToken.mint(owner, 6000 ether);
+    }
+
+    function testMint_Ok() public {
+        // 3000 external => maxSupply = 9000
+        provider1.setTotalXPShares(1000 ether);
+        provider2.setTotalXPShares(2000 ether);
+
+        vm.prank(owner);
+        xpToken.mint(owner, 500 ether);
+        assertEq(xpToken.totalSupply(), 3500 ether);
+        // totalSupply = 3500
+        // allowed to mint 5500
+
+        vm.prank(owner);
+        xpToken.mint(owner, 5500 ether);
+        assertEq(xpToken.totalSupply(), 9000 ether);
     }
 }

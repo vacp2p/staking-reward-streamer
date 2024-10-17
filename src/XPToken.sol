@@ -2,27 +2,21 @@
 pragma solidity ^0.8.26;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IXPProvider } from "./interfaces/IXPProvider.sol";
 
-contract XPToken is Ownable {
-    string public constant name = "XP Token";
-    string public constant symbol = "XP";
-    uint256 public constant decimals = 18;
+contract XPToken is ERC20, Ownable {
+    error XPToken__MintAllowanceExceeded();
 
-    uint256 public totalSupply;
+    string public constant NAME = "XP Token";
+    string public constant SYMBOL = "XP";
 
     IXPProvider[] public xpProviders;
 
     error XPToken__TransfersNotAllowed();
     error XPProvider__IndexOutOfBounds();
 
-    constructor(uint256 _totalSupply) Ownable(msg.sender) {
-        totalSupply = _totalSupply;
-    }
-
-    function setTotalSupply(uint256 _totalSupply) external onlyOwner {
-        totalSupply = _totalSupply;
-    }
+    constructor() ERC20(NAME, SYMBOL) Ownable(msg.sender) { }
 
     function addXPProvider(IXPProvider provider) external onlyOwner {
         xpProviders.push(provider);
@@ -41,36 +35,70 @@ contract XPToken is Ownable {
         return xpProviders;
     }
 
-    function balanceOf(address account) public view returns (uint256) {
-        uint256 userTotalXPShare = 0;
-        uint256 totalXPShares = 0;
+    function _totalSupply() public view returns (uint256) {
+        return super.totalSupply() + _externalSupply();
+    }
 
-        for (uint256 i = 0; i < xpProviders.length; i++) {
-            IXPProvider provider = xpProviders[i];
-            userTotalXPShare += provider.getUserXPShare(account);
-            totalXPShares += provider.getTotalXPShares();
+    function totalSupply() public view override returns (uint256) {
+        return _totalSupply();
+    }
+
+    function mint(address account, uint256 amount) external onlyOwner {
+        if (amount > _mintAllowance()) {
+            revert XPToken__MintAllowanceExceeded();
         }
 
-        if (totalXPShares == 0) {
+        _mint(account, amount);
+    }
+
+    function _mintAllowance() internal view returns (uint256) {
+        uint256 maxSupply = _externalSupply() * 3;
+        uint256 fullTotalSupply = _totalSupply();
+        if (maxSupply <= fullTotalSupply) {
             return 0;
         }
 
-        return (totalSupply * userTotalXPShare) / totalXPShares;
+        return maxSupply - fullTotalSupply;
     }
 
-    function transfer(address, uint256) external pure returns (bool) {
+    function mintAllowance() public view returns (uint256) {
+        return _mintAllowance();
+    }
+
+    function _externalSupply() internal view returns (uint256) {
+        uint256 externalSupply;
+
+        for (uint256 i = 0; i < xpProviders.length; i++) {
+            externalSupply += xpProviders[i].getTotalXPShares();
+        }
+
+        return externalSupply;
+    }
+
+    function balanceOf(address account) public view override returns (uint256) {
+        uint256 externalBalance;
+
+        for (uint256 i = 0; i < xpProviders.length; i++) {
+            IXPProvider provider = xpProviders[i];
+            externalBalance += provider.getUserXPShare(account);
+        }
+
+        return super.balanceOf(account) + externalBalance;
+    }
+
+    function transfer(address, uint256) public pure override returns (bool) {
         revert XPToken__TransfersNotAllowed();
     }
 
-    function approve(address, uint256) external pure returns (bool) {
+    function approve(address, uint256) public pure override returns (bool) {
         revert XPToken__TransfersNotAllowed();
     }
 
-    function transferFrom(address, address, uint256) external pure returns (bool) {
+    function transferFrom(address, address, uint256) public pure override returns (bool) {
         revert XPToken__TransfersNotAllowed();
     }
 
-    function allowance(address, address) external pure returns (uint256) {
+    function allowance(address, address) public pure override returns (uint256) {
         return 0;
     }
 }

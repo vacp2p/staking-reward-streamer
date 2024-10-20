@@ -25,6 +25,8 @@
 
 Difference in amount, can be either reduced or increased depending on context.
 
+---
+
 ##### $\Delta t\rightarrow$ Time Difference of Last Accrual
 
 The time difference defined as:
@@ -33,13 +35,22 @@ $$
 \Delta t = t_{now} - t_{last}, \quad \text{where}  \Delta t > T_{RATE}
 $$
 
+---
+
+
 ##### $t_{lock}\rightarrow$ Time Lock Duration
 
 A user-defined duration for which $a_{bal}$ remains locked.
 
+---
+
+
 ##### $t_{now}\rightarrow$ Time Now
 
 The current timestamp seconds since the Unix epoch (January 1, 1970).
+
+---
+
 
 ##### $t_{lock, \Delta}\rightarrow$ Time Lock Remaining Duration
 
@@ -50,11 +61,15 @@ $$
 \text{ where: }\quad & t_{lock, \Delta} = 0\text{ or }T_{MIN} \le t_{lock, \Delta} \le T_{MAX}\end{align}
 $$
 
+---
+
 #### State Related
 
 ##### $a_{bal}\rightarrow$ Amount of Balance
 
 Amount of tokens in balance, where $a_{bal} \ge A_{MIN}$.
+
+---
 
 ##### $t_{lock,end}\rightarrow$ Time Lock End
 
@@ -68,6 +83,8 @@ The value of $t_{lock,end}$ can be updated only within the functions:
 
 - $\mathcal{f}^{stake}(\mathbb{Account}, \Delta a, \Delta t_{lock})$;
 - $\mathcal{f}^{lock}(\mathbb{Account}, \Delta t_{lock})$;
+
+---
 
 ##### $t_{last}\rightarrow$ Time of Accrual
 
@@ -83,6 +100,8 @@ The value of $t_{last}$ is updated by all functions that change state:
 - $\mathcal{f}^{stake}(\mathbb{Account}, \Delta a, \Delta t_{lock})$;
 - $\mathcal{f}^{lock}(\mathbb{Account}, \Delta t_{lock})$;
 - $\mathcal{f}^{unstake}(\mathbb{Account}, \Delta a)$;
+
+---
 
 ##### $mp_\mathcal{M}\rightarrow$ Maximum Multiplier Points
 
@@ -101,21 +120,21 @@ It's state can be expressed as the following state changes:
 ###### Increase in Balance and Lock
 
 $$
-\begin{aligned}
+\begin{aligned} 
 mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\
 &\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta} + t_{lock}) \\
 &\quad + mp_\mathcal{B}(a_{bal}, t_{lock}) \\
-&\quad + mp_\mathcal{I}(\Delta a)
+&\quad + mp_\mathcal{I}(\Delta a) 
 \end{aligned}
 $$
 
 ###### Increase in Balance only
 
 $$
-\begin{aligned}
-mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\
-&\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta}) \\
-&\quad + mp_\mathcal{I}(\Delta a)
+\begin{aligned} 
+mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\ 
+&\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta}) \\ 
+&\quad + mp_\mathcal{I}(\Delta a) 
 \end{aligned}
 $$
 
@@ -131,6 +150,8 @@ $$
 mp_\mathcal{M} = mp_\mathcal{M} - mp_\mathcal{R}(mp_\mathcal{M}, a_{bal}, \Delta a)
 $$
 
+---
+
 ##### $mp_{\Sigma}\rightarrow$ Total Multiplier Points
 
 Altered by all functions that change state:
@@ -143,25 +164,27 @@ Altered by all functions that change state:
 The state can be expressed as the following state changes:
 
 $$
-mp_{\Sigma} \longrightarrow mp_{\Sigma} \pm
+mp_{\Sigma} \longrightarrow mp_{\Sigma} \pm 
 \begin{cases}
-\begin{aligned}
+\begin{aligned} 
 & min(mp_\mathcal{M} - mp_\Sigma, \\
-& \quad mp_\mathcal{A}(a_{bal}, \Delta t))
-\end{aligned} & \text{for every}  T_{RATE}, \\
+& \quad mp_\mathcal{A}(a_{bal}, \Delta t))  
+\end{aligned} & \text{for every}  T_{RATE}, \\ 
 \begin{aligned}
-& mp_\mathcal{B}(\Delta a,t_{lock, \Delta} + t_{lock}) \\
+& mp_\mathcal{B}(\Delta a,t_{lock, \Delta} + t_{lock}) \\ 
 & \quad + mp_\mathcal{B}(a_{bal}, t_{lock}) \\
-& \quad + mp_\mathcal{I}(\Delta a)
-\end{aligned} & \Rightarrow a_{bal} \uparrow \land  t_{lock,end} \uparrow, \\
+& \quad + mp_\mathcal{I}(\Delta a) 
+\end{aligned} & \Rightarrow a_{bal} \uparrow \land  t_{lock,end} \uparrow, \\ 
 \begin{aligned}
 & mp_\mathcal{B}(\Delta a, t_{lock, \Delta}) \\
-& \quad + mp_\mathcal{I}(\Delta a)
+& \quad + mp_\mathcal{I}(\Delta a) 
 \end{aligned} & \Rightarrow a_{bal} \uparrow, \\
-mp_\mathcal{B}(a_{bal}, t_{lock})  & \Rightarrow t_{lock,end} \uparrow, \\
+mp_\mathcal{B}(a_{bal}, t_{lock})  & \Rightarrow t_{lock,end} \uparrow, \\ 
 -mp_\mathcal{R}(mp_{\Sigma}, a_{bal}, \Delta a) & \Rightarrow a_{bal} \downarrow \\
 \end{cases}
 $$
+
+---
 
 ##### $\mathbb{Account}\rightarrow$ Account Storage Schema
 
@@ -170,15 +193,17 @@ Defined as following:
 $$
 \begin{gather}
 \mathbb{Account}  \\
-\overbrace{\begin{align}
-a_{bal} & : \text{balance},  \\
-t_{lock,end} & : \text{lock end}, \\
-t_{last} & : \text{last accrual}, \\
-mp_\Sigma & : \text{total MPs}, \\
-mp_\mathcal{M} & : \text{maximum MPs}
-\end{align}}
-\end{gather}
+\overbrace{\begin{align} 
+a_{bal} & : \text{balance},  \\ 
+t_{lock,end} & : \text{lock end}, \\ 
+t_{last} & : \text{last accrual}, \\ 
+mp_\Sigma & : \text{total MPs}, \\ 
+mp_\mathcal{M} & : \text{maximum MPs} 
+\end{align}} 
+\end{gather} 
 $$
+
+---
 
 ##### $\mathbb{System}\rightarrow$ System Storage Schema
 
@@ -186,14 +211,14 @@ Defined as following:
 
 $$
 \begin{gather}
- \mathbb{System}  \\
-\overbrace{\begin{align}
-\mathbb{Account}\mathrm{[]} & : \text{accounts}, \\
+ \mathbb{System}  \\ 
+\overbrace{\begin{align} 
+\mathbb{Account}\mathrm{[]} & : \text{accounts}, \\ 
 a_{bal} & : \text{total staked}, \\
-mp_\Sigma & : \text{MP supply}, \\
-mp_\mathcal{M} & : \text{MP supply max}
+mp_\Sigma & : \text{MP supply}, \\ 
+mp_\mathcal{M} & : \text{MP supply max} 
 \end{align}}
-\end{gather}
+\end{gather} 
 $$
 
 ---
@@ -204,8 +229,7 @@ $$
 
 #### Definition: $\mathcal{f}{mp_\mathcal{I}}(\Delta a) \longrightarrow$ Initial Multiplier Points
 
-Calculates the initial multiplier points (**MPs**) based on the balance change $\Delta a$. The result is equal to the
-amount of balance added.
+Calculates the initial multiplier points (**MPs**) based on the balance change $\Delta a$. The result is equal to the amount of balance added.
 
 $$
 \boxed{
@@ -223,8 +247,7 @@ Where
 
 #### Definition: $\mathcal{f}{mp_\mathcal{A}}(a_{bal}, \Delta t) \longrightarrow$ Accrue Multiplier Points
 
-Calculates the accrued multiplier points (**MPs**) over a time period **$\Delta t$**, based on the account balance
-**$a_{bal}$** and the annual percentage yield $MP_{APY}$.
+Calculates the accrued multiplier points (**MPs**) over a time period **$\Delta t$**, based on the account balance **$a_{bal}$** and the annual percentage yield $MP_{APY}$.
 
 $$
 \boxed{
@@ -237,20 +260,15 @@ $$
 Where
 
 - **$a_{bal}$**: Represents the current account balance.
-- **$\Delta t$**: The time difference or the duration over which the multiplier points are accrued, expressed in the
-  same time units as the year (typically days or months).
-- **$T_{YEAR}$**: A constant representing the duration of a full year, used to normalize the time difference
-  **$\Delta t$**.
-- **$MP_{APY}$**: The Annual Percentage Yield (APY) expressed as a percentage, which determines how much the balance
-  grows over a year.
+- **$\Delta t$**: The time difference or the duration over which the multiplier points are accrued, expressed in the same time units as the year (typically days or months).
+- **$T_{YEAR}$**: A constant representing the duration of a full year, used to normalize the time difference **$\Delta t$**.
+- **$MP_{APY}$**: The Annual Percentage Yield (APY) expressed as a percentage, which determines how much the balance grows over a year.
 
 ---
 
 #### Definition: $\mathcal{f}{mp_\mathcal{B}}(\Delta A, t_{lock}) \longrightarrow$ Bonus Multiplier Points
 
-Calculates the bonus multiplier points (**MPs**) earned when a balance **$\Delta a$** is locked for a specified duration
-**$t_{lock}$**. It is equivalent to the accrued multiplier points function
-$\mathcal{f}mp_\mathcal{A}(\Delta a, t_{lock})$ but specifically applied in the context of a locked balance.
+Calculates the bonus multiplier points (**MPs**) earned when a balance **$\Delta a$** is locked for a specified duration **$t_{lock}$**. It is equivalent to the accrued multiplier points function $\mathcal{f}mp_\mathcal{A}(\Delta a, t_{lock})$ but specifically applied in the context of a locked balance.
 
 $$
 \begin{aligned}
@@ -267,18 +285,14 @@ Where:
 
 - **$\Delta a$**: Represents the amount of the balance that is locked.
 - **$t_{lock}$**: The duration for which the balance **$\Delta a$** is locked, measured in units of seconds.
-- **$T_{YEAR}$**: A constant representing the length of a year, used to normalize the lock period **$t_{lock}$** as a
-  fraction of a full year.
-- **$MP_{APY}$**: The Annual Percentage Yield (APY), expressed as a percentage, which indicates the yearly interest rate
-  applied to the locked balance.
+- **$T_{YEAR}$**: A constant representing the length of a year, used to normalize the lock period **$t_{lock}$** as a fraction of a full year.
+- **$MP_{APY}$**: The Annual Percentage Yield (APY), expressed as a percentage, which indicates the yearly interest rate applied to the locked balance.
 
 ---
 
 #### Definition: $\mathcal{f}{mp_\mathcal{R}}(mp, a_{bal}, \Delta a) \longrightarrow$ Reduce Multiplier Points
 
-Calculates the reduction in multiplier points (**MPs**) when a portion of the balance **$\Delta a$** is removed from the
-total balance **$a_{bal}$**. The reduction is proportional to the ratio of the removed balance to the total balance,
-applied to the current multiplier points **$mp$**.
+Calculates the reduction in multiplier points (**MPs**) when a portion of the balance **$\Delta a$** is removed from the total balance **$a_{bal}$**. The reduction is proportional to the ratio of the removed balance to the total balance, applied to the current multiplier points **$mp$**.
 
 $$
 \boxed{
@@ -288,19 +302,17 @@ $$
 }
 $$
 
-Where:
+ Where:
 
-- **$mp$**: Represents the current multiplier points.
-- **$a_{bal}$**: The total account balance before the removal of **$\Delta a$**.
-- **$\Delta a$**: The amount of balance being removed or deducted.
+ - **$mp$**: Represents the current multiplier points.
+ - **$a_{bal}$**: The total account balance before the removal of **$\Delta a$**.
+ - **$\Delta a$**: The amount of balance being removed or deducted.
 
 ---
 
 ### State Functions
 
-These function definitions represent methods that modify the state of both **$\mathbb{System}$** and
-**$\mathbb{Account}$**. They perform various pure mathematical operations to implement the specified state changes,
-affecting either the system as a whole and the individual account states.
+These function definitions represent methods that modify the state of both **$\mathbb{System}$** and **$\mathbb{Account}$**. They perform various pure mathematical operations to implement the specified state changes, affecting either the system as a whole and the individual account states.
 
 #### Definition: $\mathcal{f}^{stake}(\mathbb{Account},\Delta A, t_{lock}) \longrightarrow$ Stake Amount With Lock
 
@@ -562,7 +574,7 @@ $$
 
 $$
 \Delta t = t_{now} - \mathbb{Account} \cdot t_{last}
-$$
+$$ 
 
 ##### Verify Constraints
 
@@ -576,7 +588,7 @@ $$
 
 $$
 \Delta \hat{mp}^\mathcal{A} = min(\mathcal{f}mp_\mathcal{A}(\mathbb{Account} \cdot a_{bal},\Delta t) ,\mathbb{Account} \cdot mp_\mathcal{M} - \mathbb{Account} \cdot mp_\Sigma)
-$$
+$$ 
 
 ##### Update account State
 

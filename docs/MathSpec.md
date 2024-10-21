@@ -39,20 +39,17 @@ $$
 
 ---
 
-
 ##### $t_{lock}\rightarrow$ Time Lock Duration
 
 A user-defined duration for which $a_{bal}$ remains locked.
 
 ---
 
-
 ##### $t_{now}\rightarrow$ Time Now
 
 The current timestamp seconds since the Unix epoch (January 1, 1970).
 
 ---
-
 
 ##### $t_{lock, \Delta}\rightarrow$ Time Lock Remaining Duration
 

@@ -2,6 +2,8 @@
 
 > [!attention] All values in this document are expressed as unsigned integers.
 
+### Summary
+
 ### Constants
 
 | Symbol            | Source                                                              | Value                   | Unit              | Description                                                                                                       |
@@ -343,7 +345,45 @@ affecting either the system as a whole and the individual account states.
 
 _Purpose:_ Allows a user to stake an amount $\Delta a$ with an optional lock duration $t_{lock}$.
 
+```mermaid
+---
+title: Stake Storage Access Flowchart
+---
+flowchart LR
+	BonusMP{{Bonus MP}}
+	InitialMP{{Initial MP}}
+
+	Balance
+	LockEnd[Lock End]
+	TotalMP[Total MPs]
+	MaxMP[Maximum\nMPs]
+
+	FBonusMP{Calc\nBonus MP}
+	FMaxMP{Calc Max\nAccrue MP}
+	M_MAX([MAX\nMULTIPLIER])
+    %% Stake Process
+
+    %% Update Flow
+    Balance --> InitialMP
+    Balance --> FMaxMP
+    M_MAX --> FMaxMP
+    InitialMP --> TotalMP
+    InitialMP --> MaxMP
+
+    BonusMP --> TotalMP
+    BonusMP --> MaxMP
+    FMaxMP --> MaxMP
+
+    LockEnd --> FBonusMP
+    Balance --> FBonusMP
+    FBonusMP --> BonusMP
+```
+
 ##### Steps
+
+###### Accrue Existing Multiplier Points (MPs)
+
+Call the $\mathcal{f}_{accrue}(\mathbb{Account})$ function to update MPs and last accrual time.
 
 ###### Calculate the New Remaining Lock Period ($\Delta t_{lock}$)
 
@@ -364,10 +404,6 @@ $$
 $$
 \Delta t_{lock} = 0 \lor T_{MIN} \le \Delta t_{lock} \le T_{MAX}
 $$
-
-###### Accrue Existing Multiplier Points (MPs)
-
-Call the $\mathcal{f}_{accrue}(\mathbb{Account})$ function to update MPs and last accrual time.
 
 ###### Calculate Increased Bonus MPs
 
@@ -449,7 +485,28 @@ $$
 
 _Purpose:_ Allows a user to lock the $\mathbb{Account} \cdot a_{bal}$ with a lock duration $t_{lock}$.
 
+```mermaid
+---
+title: Lock Storage Access Flowchart
+---
+flowchart LR
+	BonusMP{{Bonus MP}}
+	LockEnd[Lock End]
+	TotalMP[Total MPs]
+	MaxMP[Maximum\nMPs]
+	FBonusMP{Calc\nBonus MP}
+    BonusMP --> TotalMP
+    BonusMP --> MaxMP
+    LockEnd --> FBonusMP
+    Balance --> FBonusMP
+    FBonusMP --> BonusMP
+```
+
 ##### Steps
+
+###### Accrue Existing Multiplier Points (MPs)
+
+Call the $\mathcal{f}_{accrue}(\mathbb{Account})$ function to update MPs and last accrual time.
 
 ###### Calculate the New Remaining Lock Period ($\Delta t_{lock}$)
 
@@ -464,10 +521,6 @@ Ensure the New Remaining Lock Period ($\Delta t_{lock}$) is within allowed limit
 $$
 \Delta t_{lock} = 0 \lor T_{MIN} \le \Delta t_{lock} \le T_{MAX}
 $$
-
-###### Accrue Existing Multiplier Points (MPs)
-
-Call the $\mathcal{f}_{accrue}(\mathbb{Account})$ function to update MPs and last accrual time.
 
 ###### Calculate Bonus MPs for the Increased Lock Period
 
@@ -515,7 +568,31 @@ $$
 
 Purpose: Allows a user to unstake an amount $\Delta a$.
 
+```mermaid
+---
+title: Unstake Storage Access Flowchart
+---
+flowchart LR
+	Balance
+	TotalMP[Total MPs]
+	MaxMP[Maximum\nMPs]
+
+	FReduceMP{Calc\nReduced MP}
+
+    %% Unstake Process
+    TotalMP --> FReduceMP
+    MaxMP --> FReduceMP
+    Balance --> FReduceMP
+    FReduceMP --> Balance
+    FReduceMP --> TotalMP
+    FReduceMP --> MaxMP
+```
+
 ##### Steps
+
+###### Accrue Existing Multiplier Points (MPs)
+
+Call the $\mathcal{f}_{accrue}(\mathbb{Account})$ function to update MPs and last accrual time.
 
 ###### Verify Constraints
 
@@ -536,10 +613,6 @@ Ensure that new balance ($\mathbb{Account} \cdot a_{bal} - \Delta a$) will be ze
 $$
 \mathbb{Account} \cdot a_{bal} - \Delta a = 0 \lor \mathbb{Account} \cdot a_{bal} - \Delta a > A_{MIN}
 $$
-
-###### Accrue Existing Multiplier Points (MPs)
-
-Call the $\mathcal{f}_{accrue}(\mathbb{Account})$ function to update MPs and last accrual time.
 
 ###### Calculate Reduced Amounts
 
@@ -600,6 +673,33 @@ $$
 #### Definition: $\mathcal{f}^{accrue}(\mathbb{Account}) \longrightarrow$ Accrue Multiplier Points
 
 Purpose: Accrue multiplier points (MPs) for the account based on the elapsed time since the last accrual.
+
+```mermaid
+---
+title: Accrue Storage Access Flowchart
+---
+flowchart LR
+
+
+
+
+	AccruedMP{{Accrued MP}}
+
+	Balance
+	LastMint[Last Mint]
+	TotalMP[Total MPs] --> MAX{max}
+	MaxMP[Maximum\nMPs] --> MAX
+	FAccruedMP{Calc\nAccrued MP}
+    %% Update Flow
+
+	NOW((NOW)) --> FAccruedMP
+	FAccruedMP --> LastMint
+	LastMint --> FAccruedMP
+    Balance --> FAccruedMP
+    FAccruedMP --> AccruedMP
+    AccruedMP --> MAX
+    MAX --> TotalMP
+```
 
 ##### Steps
 

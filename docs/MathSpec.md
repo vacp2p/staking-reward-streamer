@@ -352,28 +352,21 @@ title: Stake Storage Access Flowchart
 flowchart LR
 	BonusMP{{Bonus MP}}
 	InitialMP{{Initial MP}}
-
 	Balance
 	LockEnd[Lock End]
 	TotalMP[Total MPs]
-	MaxMP[Maximum\nMPs]
-
-	FBonusMP{Calc\nBonus MP}
-	FMaxMP{Calc Max\nAccrue MP}
-	M_MAX([MAX\nMULTIPLIER])
-    %% Stake Process
-
-    %% Update Flow
+	MaxMP[Maximum MPs]
+	FBonusMP{Calc Bonus MP}
+	FMaxMP{Calc Max Accrue MP}
+	M_MAX([MAX MULTIPLIER])
     Balance --> InitialMP
     Balance --> FMaxMP
     M_MAX --> FMaxMP
     InitialMP --> TotalMP
     InitialMP --> MaxMP
-
     BonusMP --> TotalMP
     BonusMP --> MaxMP
     FMaxMP --> MaxMP
-
     LockEnd --> FBonusMP
     Balance --> FBonusMP
     FBonusMP --> BonusMP
@@ -493,8 +486,8 @@ flowchart LR
 	BonusMP{{Bonus MP}}
 	LockEnd[Lock End]
 	TotalMP[Total MPs]
-	MaxMP[Maximum\nMPs]
-	FBonusMP{Calc\nBonus MP}
+	MaxMP[Maximum MPs]
+	FBonusMP{Calc Bonus MP}
     BonusMP --> TotalMP
     BonusMP --> MaxMP
     LockEnd --> FBonusMP
@@ -575,11 +568,8 @@ title: Unstake Storage Access Flowchart
 flowchart LR
 	Balance
 	TotalMP[Total MPs]
-	MaxMP[Maximum\nMPs]
-
-	FReduceMP{Calc\nReduced MP}
-
-    %% Unstake Process
+	MaxMP[Maximum MPs]
+	FReduceMP{Calc Reduced MP}
     TotalMP --> FReduceMP
     MaxMP --> FReduceMP
     Balance --> FReduceMP
@@ -679,19 +669,12 @@ Purpose: Accrue multiplier points (MPs) for the account based on the elapsed tim
 title: Accrue Storage Access Flowchart
 ---
 flowchart LR
-
-
-
-
 	AccruedMP{{Accrued MP}}
-
 	Balance
 	LastMint[Last Mint]
 	TotalMP[Total MPs] --> MAX{max}
-	MaxMP[Maximum\nMPs] --> MAX
-	FAccruedMP{Calc\nAccrued MP}
-    %% Update Flow
-
+	MaxMP[Maximum MPs] --> MAX
+	FAccruedMP{Calc Accrued MP}
 	NOW((NOW)) --> FAccruedMP
 	FAccruedMP --> LastMint
 	LastMint --> FAccruedMP

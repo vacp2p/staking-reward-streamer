@@ -759,4 +759,9 @@ $$
 > it's not guaranteed.
 
 Estimates the time an account set as locked time. This can be used to limit the extension on the lock time.
-$\hat{\mathcal{f}}\tilde{t}_{lock}(mp_\mathcal{M}, a_{bal}) \approx \left\lceil\dfrac{( mp_\mathcal{M} - a_{bal} \times (M_{max} + 1)) \times T_{YEAR} \times 100 }{ a_{bal} \times MP_{APY}}\right\rceil$
+
+$$
+\begin{align}
+\hat{\mathcal{f}}\tilde{t}_{\text{lock}}(mp_{\mathcal{M}}, a_{\text{bal}}) &\approx \left\lceil \frac{(mp_{\mathcal{M}} - a_{\text{bal}}) \times 100 \times T_{\text{YEAR}}}{a_{\text{bal}} \times MP_{\text{APY}}} - M_{\text{MAX}} \times T_{\text{YEAR}} \right\rceil
+\end{align}
+$$

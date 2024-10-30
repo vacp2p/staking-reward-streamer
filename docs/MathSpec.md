@@ -1,7 +1,6 @@
 ## Mathematical Specification of Staking Protocol
 
-> [!IMPORTANT] 
-> All values in this document are expressed as unsigned integers.
+> [!IMPORTANT] All values in this document are expressed as unsigned integers.
 
 ### Summary
 
@@ -240,8 +239,7 @@ $$
 
 ### Pure Mathematical Functions
 
-> [!NOTE] 
-> This function definitions represent direct mathematical input -> output methods, which don't change state.
+> [!NOTE] This function definitions represent direct mathematical input -> output methods, which don't change state.
 
 #### Definition: $\mathcal{f}{mp_\mathcal{I}}(\Delta a) \longrightarrow$ Initial Multiplier Points
 
@@ -476,8 +474,7 @@ $$
 
 #### Definition: $\mathcal{f}^{lock}(\mathbb{Account}, t_{lock}) \longrightarrow$ Increase Lock
 
-> [!NOTE] 
-> Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
+> [!NOTE] Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
 
 _Purpose:_ Allows a user to lock the $\mathbb{Account} \cdot a_{bal}$ with a lock duration $t_{lock}$.
 
@@ -732,3 +729,34 @@ $$
 $$
 
 ---
+
+### View Functions
+
+#### Maximum Total Multiplier Points
+
+> [!NOTE] The maximum total multiplier points that can be generated for a determined amount of balance and lock
+> duration.
+
+$\hat{\mathcal{f}}mp_\mathcal{M}(\Delta a, t_{lock}) = \mathcal{f}mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) + \mathcal{f}mp_\mathcal{B}(\Delta a, t_{lock}) + \mathcal{f}mp_\mathcal{I}(\Delta a)$
+$\hat{\mathcal{f}}mp_\mathcal{M}(\Delta a, t_{lock}) = \left(\dfrac{\Delta a \times (M_{MAX} \times T_{YEAR}) \times MP_{APY}}{T_{YEAR} \times 100}\right) + \left( \dfrac{\Delta a \times t_{lock} \times MP_{APY}}{T_{YEAR} \times 100} \right)+ \Delta a$
+
+$$
+\boxed{\hat{\mathcal{f}}mp_\mathcal{M}(\Delta a, t_{lock}) = \dfrac{\Delta a \times MP_{APY}}{100} \times \left(M_{MAX} + \dfrac{t_{lock}}{T_{YEAR}}\right) + \Delta a}
+$$
+
+#### Absolute Maximum Multiplier Points
+
+The absolute maximum multiplier points that some balance could have, using the maximum lock time and maximum accrual
+period. This can be used to limit the extension on the lock time.
+
+$$
+mp_\mathcal{M}^{abs} = a_{bal} + \left( \dfrac{a_{bal} \times T_{max} \times MP_{APY}}{T_{YEAR} \times 100} \right) + a_{bal} \times M_{max}
+$$
+
+#### Locked Time ($t_{lock}$)
+
+> [!CAUTION] This value is estimated and can be incorrect due precision loss, rounding up mostly helps with this but
+> it's not guaranteed.
+
+Estimates the time an account set as locked time. This can be used to limit the extension on the lock time.
+$\hat{\mathcal{f}}\tilde{t}_{lock}(mp_\mathcal{M}, a_{bal}) \approx \left\lceil\dfrac{( mp_\mathcal{M} - a_{bal} \times (M_{max} + 1)) \times T_{YEAR} \times 100 }{ a_{bal} \times MP_{APY}}\right\rceil$

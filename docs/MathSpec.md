@@ -1,6 +1,7 @@
 ## Mathematical Specification of Staking Protocol
 
-> [!attention] All values in this document are expressed as unsigned integers.
+> [!IMPORTANT] 
+> All values in this document are expressed as unsigned integers.
 
 ### Summary
 
@@ -239,7 +240,8 @@ $$
 
 ### Pure Mathematical Functions
 
-> [!info] This function definitions represent direct mathematical input -> output methods, which don't change state.
+> [!NOTE] 
+> This function definitions represent direct mathematical input -> output methods, which don't change state.
 
 #### Definition: $\mathcal{f}{mp_\mathcal{I}}(\Delta a) \longrightarrow$ Initial Multiplier Points
 
@@ -474,7 +476,8 @@ $$
 
 #### Definition: $\mathcal{f}^{lock}(\mathbb{Account}, t_{lock}) \longrightarrow$ Increase Lock
 
-> [!info] Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
+> [!NOTE] 
+> Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
 
 _Purpose:_ Allows a user to lock the $\mathbb{Account} \cdot a_{bal}$ with a lock duration $t_{lock}$.
 

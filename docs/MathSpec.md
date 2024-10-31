@@ -786,7 +786,7 @@ $$
 
 #### Remaining Time Lock Allowed to Increase
 
-Retrieves how much time lock can be incrased
+Retrieves how much time lock can be increased
 
 $$
 t_{lock}^{max,rem} = \left( \left( 1 + \dfrac{T_{MAX_{YEAR}} \times MP_{APY}}{100} + M_{MAX} \right) - \dfrac{mp_{\mathcal{M}}}{a_{bal}} \right) \times \dfrac{100 \times T_{YEAR}}{MP_{APY}}

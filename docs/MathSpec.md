@@ -392,7 +392,7 @@ $$
 \mathbb{Account} \cdot a_{bal} + \Delta a > A_{MIN}
 $$
 
-###### Ensure the New Remaining Lock Period ($\Delta t_{lock}$) is within Allowed Limits
+Ensure the New Remaining Lock Period ($\Delta t_{lock}$) is within Allowed Limits
 
 $$
 \Delta t_{lock} = 0 \lor T_{MIN} \le \Delta t_{lock} \le T_{MAX}
@@ -422,6 +422,15 @@ $$
 
 $$
 \Delta mp_\Sigma = \mathcal{f}mp_\mathcal{I}(\Delta a) + \Delta \hat{mp}^\mathcal{B}
+$$
+
+###### Verify Constraints
+
+Ensure the New Maximum MPs ($\mathbb{Account} \cdot mp_\mathcal{M} + \Delta mp_\mathcal{M}$) is within the Absolute
+Maximum MPs:
+
+$$
+\mathbb{Account} \cdot mp_\mathcal{M} + \Delta mp_\mathcal{M} \le a_{bal} \times \left( 1 + \dfrac{T_{MAX_{YEAR}} \times MP_{APY}}{100} + M_{MAX} \right)
 $$
 
 ###### Update account State
@@ -519,6 +528,15 @@ $$
 
 $$
 \Delta \hat{mp}^\mathcal{B} = mp_\mathcal{B}(\mathbb{Account} \cdot a_{bal}, t_{lock})
+$$
+
+###### Verify Constraints
+
+Ensure the New Maximum MPs ($\mathbb{Account} \cdot mp_\mathcal{M} + \Delta \hat{mp}^\mathcal{B}$) is within the
+Absolute Maximum MPs:
+
+$$
+\mathbb{Account} \cdot mp_\mathcal{M} + \Delta \hat{mp}^\mathcal{B} \le a_{bal} \times \left( 1 + \dfrac{T_{MAX_{YEAR}} \times MP_{APY}}{100} + M_{MAX} \right)
 $$
 
 ###### Update account State
@@ -750,7 +768,7 @@ The absolute maximum multiplier points that some balance could have, using the m
 period. This can be used to limit the extension on the lock time.
 
 $$
-mp_\mathcal{M}^{abs} = a_{bal} + \left( \dfrac{a_{bal} \times T_{max} \times MP_{APY}}{T_{YEAR} \times 100} \right) + a_{bal} \times M_{max}
+mp_\mathcal{M} = a_{bal} \times \left( 1 + \dfrac{T_{MAX_{YEAR}} \times MP_{APY}}{100} + M_{MAX} \right)
 $$
 
 #### Locked Time ($t_{lock}$)
@@ -764,4 +782,12 @@ $$
 \begin{align}
 \hat{\mathcal{f}}\tilde{t}_{\text{lock}}(mp_{\mathcal{M}}, a_{\text{bal}}) &\approx \left\lceil \frac{(mp_{\mathcal{M}} - a_{\text{bal}}) \times 100 \times T_{\text{YEAR}}}{a_{\text{bal}} \times MP_{\text{APY}}} - M_{\text{MAX}} \times T_{\text{YEAR}} \right\rceil
 \end{align}
+$$
+
+#### Remaining Time Lock Allowed to Increase
+
+Retrieves how much time lock can be incrased
+
+$$
+t_{lock}^{max,rem} = \left( \left( 1 + \dfrac{T_{MAX_{YEAR}} \times MP_{APY}}{100} + M_{MAX} \right) - \dfrac{mp_{\mathcal{M}}}{a_{bal}} \right) \times \dfrac{100 \times T_{YEAR}}{MP_{APY}}
 $$

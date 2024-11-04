@@ -1,6 +1,8 @@
 ## Mathematical Specification of Staking Protocol
 
-> [!IMPORTANT] All values in this document are expressed as unsigned integers.
+<!-- prettier-ignore -->
+> [!IMPORTANT] 
+> All values in this document are expressed as unsigned integers.
 
 ### Summary
 
@@ -239,7 +241,9 @@ $$
 
 ### Pure Mathematical Functions
 
-> [!NOTE] This function definitions represent direct mathematical input -> output methods, which don't change state.
+<!-- prettier-ignore -->
+> [!NOTE] 
+> This function definitions represent direct mathematical input -> output methods, which don't change state.
 
 #### Definition: $\mathcal{f}{mp_\mathcal{I}}(\Delta a) \longrightarrow$ Initial Multiplier Points
 
@@ -483,7 +487,9 @@ $$
 
 #### Definition: $\mathcal{f}^{lock}(\mathbb{Account}, t_{lock}) \longrightarrow$ Increase Lock
 
-> [!NOTE] Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
+<!-- prettier-ignore -->
+> [!NOTE] 
+> Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
 
 _Purpose:_ Allows a user to lock the $\mathbb{Account} \cdot a_{bal}$ with a lock duration $t_{lock}$.
 
@@ -752,8 +758,9 @@ $$
 
 #### Maximum Total Multiplier Points
 
-> [!NOTE] The maximum total multiplier points that can be generated for a determined amount of balance and lock
-> duration.
+<!-- prettier-ignore -->
+> [!NOTE] 
+> The maximum total multiplier points that can be generated for a determined amount of balance and lock duration.
 
 $\hat{\mathcal{f}}mp_\mathcal{M}(\Delta a, t_{lock}) = \mathcal{f}mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) + \mathcal{f}mp_\mathcal{B}(\Delta a, t_{lock}) + \mathcal{f}mp_\mathcal{I}(\Delta a)$
 $\hat{\mathcal{f}}mp_\mathcal{M}(\Delta a, t_{lock}) = \left(\dfrac{\Delta a \times (M_{MAX} \times T_{YEAR}) \times MP_{APY}}{T_{YEAR} \times 100}\right) + \left( \dfrac{\Delta a \times t_{lock} \times MP_{APY}}{T_{YEAR} \times 100} \right)+ \Delta a$
@@ -773,8 +780,9 @@ $$
 
 #### Locked Time ($t_{lock}$)
 
-> [!CAUTION] This value is estimated and can be incorrect due precision loss, rounding up mostly helps with this but
-> it's not guaranteed.
+<!-- prettier-ignore -->
+> [!CAUTION] 
+> This value is estimated and can be incorrect due precision loss, rounding up mostly helps with this but it's not guaranteed.
 
 Estimates the time an account set as locked time. This can be used to limit the extension on the lock time.
 

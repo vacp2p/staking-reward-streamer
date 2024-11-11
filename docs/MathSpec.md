@@ -61,8 +61,10 @@ The current timestamp seconds since the Unix epoch (January 1, 1970).
 Seconds $a_{bal}$ remains locked, expressed as:
 
 $$
-\begin{align} &t_{lock, \Delta} = max(t_{lock,end},t_{now}) - t_{now}  \\
-\text{ where: }\quad & t_{lock, \Delta} = 0\text{ or }T_{MIN} \le t_{lock, \Delta} \le (M_{MAX} \times T_{YEAR})\end{align}
+\begin{align}
+	&t_{lock, \Delta} = max(t_{lock,end},t_{now}) - t_{now}  \\
+	\text{ where: }\quad & t_{lock, \Delta} = 0\text{ or }T_{MIN} \le t_{lock, \Delta} \le (M_{MAX} \times T_{YEAR})
+\end{align}
 $$
 
 ---
@@ -125,10 +127,10 @@ It's state can be expressed as the following state changes:
 
 $$
 \begin{aligned}
-mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\
-&\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta} + t_{lock}) \\
-&\quad + mp_\mathcal{B}(a_{bal}, t_{lock}) \\
-&\quad + mp_\mathcal{I}(\Delta a)
+	mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\
+	&\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta} + t_{lock}) \\
+	&\quad + mp_\mathcal{B}(a_{bal}, t_{lock}) \\
+	&\quad + mp_\mathcal{I}(\Delta a)
 \end{aligned}
 $$
 
@@ -136,9 +138,9 @@ $$
 
 $$
 \begin{aligned}
-mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\
-&\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta}) \\
-&\quad + mp_\mathcal{I}(\Delta a)
+	mp_\mathcal{M} &= mp_\mathcal{M} + mp_\mathcal{A}(\Delta a, M_{MAX} \times T_{YEAR}) \\
+	&\quad + mp_\mathcal{B}(\Delta a, t_{lock,\Delta}) \\
+	&\quad + mp_\mathcal{I}(\Delta a)
 \end{aligned}
 $$
 
@@ -170,16 +172,16 @@ The state can be expressed as the following state changes:
 ###### For every $T_{RATE}$
 
 $$
-mp_{\Sigma} = min(\mathcal{f}mp_\mathcal{A}(a_{bal},\Delta t) ,mp_\mathcal{M} -  mp_\Sigma)
+	mp_{\Sigma} = min(\mathcal{f}mp_\mathcal{A}(a_{bal},\Delta t) ,mp_\mathcal{M} -  mp_\Sigma)
 $$
 
 ###### Increase in Balance and Lock
 
 $$
 \begin{aligned}
-mp_{\Sigma} &= mp_{\Sigma} + mp_\mathcal{B}(\Delta a, t_{lock, \Delta} + t_{lock}) \\
-&\quad + mp_\mathcal{B}(a_{bal}, t_{lock}) \\
-&\quad + mp_\mathcal{I}(\Delta a)
+	mp_{\Sigma} &= mp_{\Sigma} + mp_\mathcal{B}(\Delta a, t_{lock, \Delta} + t_{lock}) \\
+	&\quad + mp_\mathcal{B}(a_{bal}, t_{lock}) \\
+	&\quad + mp_\mathcal{I}(\Delta a)
 \end{aligned}
 $$
 
@@ -209,14 +211,16 @@ Defined as following:
 
 $$
 \begin{gather}
-\mathbb{Account}  \\
-\overbrace{\begin{align}
-a_{bal} & : \text{balance},  \\
-t_{lock,end} & : \text{lock end}, \\
-t_{last} & : \text{last accrual}, \\
-mp_\Sigma & : \text{total MPs}, \\
-mp_\mathcal{M} & : \text{maximum MPs}
-\end{align}}
+	\mathbb{Account}  \\
+	\overbrace{
+		\begin{align}
+			a_{bal} & : \text{balance},  \\
+			t_{lock,end} & : \text{lock end}, \\
+			t_{last} & : \text{last accrual}, \\
+			mp_\Sigma & : \text{total MPs}, \\
+			mp_\mathcal{M} & : \text{maximum MPs}
+		\end{align}
+	}
 \end{gather}
 $$
 
@@ -228,13 +232,15 @@ Defined as following:
 
 $$
 \begin{gather}
- \mathbb{System}  \\
-\overbrace{\begin{align}
-\mathbb{Account}\mathrm{[]} & : \text{accounts}, \\
-a_{bal} & : \text{total staked}, \\
-mp_\Sigma & : \text{MP supply}, \\
-mp_\mathcal{M} & : \text{MP supply max}
-\end{align}}
+	\mathbb{System}  \\
+	\overbrace{
+		\begin{align}
+			\mathbb{Account}\mathrm{[]} & : \text{accounts}, \\
+			a_{bal} & : \text{total staked}, \\
+			mp_\Sigma & : \text{MP supply}, \\
+			mp_\mathcal{M} & : \text{MP supply max}
+		\end{align}
+	}
 \end{gather}
 $$
 
@@ -490,7 +496,7 @@ $$
 
 <!-- prettier-ignore -->
 > [!NOTE] 
-> Equivalent to $\mathcal{f}_{stake}(\mathbb{Account},0, t_{lock})$
+> Equivalent to calling stake function with amount 0.
 
 _Purpose:_ Allows a user to lock the $\mathbb{Account} \cdot a_{bal}$ with a lock duration $t_{lock}$.
 
@@ -544,8 +550,6 @@ Absolute Maximum MPs:
 
 $$
 \mathbb{Account} \cdot mp_\mathcal{M} + \Delta \hat{mp}^\mathcal{B} \le \frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100}
-
-
 $$
 
 ###### Update account State

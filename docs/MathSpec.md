@@ -805,9 +805,7 @@ Estimates the time an account set as locked time.
 
 $$
 \boxed{
-	\begin{equation}
-		\hat{\mathcal{f}}\tilde{t}_{lock}(mp_{\mathcal{M}}, a_{bal}) \approx \left\lceil \frac{(mp_{\mathcal{M}} - a_{bal}) \times 100 \times T_{YEAR}}{a_{bal} \times \mathtt{APY}}\right\rceil - T_{\text{YEAR}} \times M_{\text{MAX}}
-	\end{equation}
+	\hat{\mathcal{f}}\tilde{t}_{lock}(mp_{\mathcal{M}}, a_{bal}) \approx \left\lceil \frac{(mp_{\mathcal{M}} - a_{bal}) \times 100 \times T_{YEAR}}{a_{bal} \times \mathtt{APY}}\right\rceil - T_{\text{YEAR}} \times M_{\text{MAX}}
 }
 $$
 
@@ -827,8 +825,6 @@ Retrieves how much time lock can be increased for an account.
 
 $$
 \boxed{
-	\begin{equation}
-		t_{lock}^{rem}(a_{bal},mp_\mathcal{M}) \approx \frac{(\frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100} - mp_\mathcal{M})\times T_{YEAR}}{a_{bal}}
-	\end{equation}
+	t_{lock}^{rem}(a_{bal},mp_\mathcal{M}) \approx \frac{(\frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100} - mp_\mathcal{M})\times T_{YEAR}}{a_{bal}}
 }
 $$

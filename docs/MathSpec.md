@@ -768,7 +768,9 @@ $$
 The maximum total multiplier points that can be generated for a determined amount of balance and lock duration.
 
 $$
-\boxed{\hat{\mathcal{f}}mp_{\mathcal{M}}(a_{bal}, t_{\text{lock}}) = a_{bal} + \frac{a_{bal} \times \mathtt{APY} \times \left( M_{\text{MAX}} \times T_{\text{YEAR}} + t_{\text{lock}} \right)}{100 \times T_{\text{YEAR}}}}
+\boxed{
+	\hat{\mathcal{f}}mp_{\mathcal{M}}(a_{bal}, t_{\text{lock}}) = a_{bal} + \frac{a_{bal} \times \mathtt{APY} \times \left( M_{\text{MAX}} \times T_{\text{YEAR}} + t_{\text{lock}} \right)}{100 \times T_{\text{YEAR}}}
+}
 $$
 
 #### Maximum Accrued Multiplier Points
@@ -776,7 +778,9 @@ $$
 The maximum multiplier points that can be accrued over time for a determined amount of balance.
 
 $$
-\boxed{\hat{\mathcal{f}}mp_\Sigma^{max}(a_{bal}) = \frac{a_{bal} \times \mathsf{MPY}}{100}}
+\boxed{
+	\hat{\mathcal{f}}mp_\Sigma^{max}(a_{bal}) = \frac{a_{bal} \times \mathsf{MPY}}{100}
+}
 $$
 
 #### Maximum Absolute Multiplier Points
@@ -785,12 +789,16 @@ The absolute maximum multiplier points that some balance could have, which is th
 time and the maximum accrued multiplier points.
 
 $$
-\boxed{\hat{\mathcal{f}}mp_\mathcal{M}^\mathit{abs}(a_{bal}) = \frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100}}
+\boxed{
+	\hat{\mathcal{f}}mp_\mathcal{M}^\mathit{abs}(a_{bal}) = \frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100}
+}
 $$
 
 #### Locked Time ($t_{lock}$)
 
-> [!CAUTION] If implemented with integers, for $a_{bal} < T_{YEAR}$, due precision loss, this values will be an
+<!-- prettier-ignore -->
+> [!CAUTION] 
+> If implemented with integers, for $a_{bal} < T_{YEAR}$, due precision loss, this values will be an
 > approximation.
 
 Estimates the time an account set as locked time.
@@ -810,7 +818,9 @@ Where:
 
 #### Remaining Time Lock Allowed to Increase
 
-> [!CAUTION] If implemented with integers, for $a_{bal} < T_{YEAR}$, due precision loss, this values will be an
+<!-- prettier-ignore -->
+> [!CAUTION] 
+> If implemented with integers, for $a_{bal} < T_{YEAR}$, due precision loss, this values will be an
 > approximation.
 
 Retrieves how much time lock can be increased for an account.

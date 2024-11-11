@@ -14,7 +14,7 @@
 | $M_{MAX}$                   |                                                                         | $\pu{4 \mathrm{(1)}}$   | (1)               | Maximum multiplier of annual percentage yield.                                                                    |
 | $\mathtt{APY}$              |                                                                         | 100                     | percent           | Annual percentage yield for multiplier points.                                                                    |
 | $\mathsf{MPY}$              | $M_{MAX} \times \mathtt{APY}$                                           | 400                     | percent           | Multiplier points accrued maximum percentage yield                                                                |
-| $\mathsf{MPY}_\mathit{abs}$ | $100 + (2 \times M_{\text{MAX}} \times \mathtt{APY})$                   | 900                     | percent           | Multiplier points absolute maximum percentage yield                                                               |
+| $\mathsf{MPY}^\mathit{abs}$ | $100 + (2 \times M_{MAX} \times \mathtt{APY})$                   | 900                     | percent           | Multiplier points absolute maximum percentage yield                                                               |
 | $T_{RATE}$                  | (minimal blocktime)                                                     | 12                      | seconds           |                                                                                                                   |
 | $T_{DAY}$                   |                                                                         | 86400                   | seconds           | One day.                                                                                                          |
 | $T_{YEAR}$                  | $\lfloor365.242190 \times T_{DAY}\rfloor$                               | 31556925                | seconds           | One (mean) tropical year.                                                                                         |
@@ -441,7 +441,7 @@ Ensure the New Maximum MPs ($\mathbb{Account} \cdot mp_\mathcal{M} + \Delta mp_\
 Maximum MPs:
 
 $$
-\mathbb{Account} \cdot mp_\mathcal{M} + \Delta mp_\mathcal{M} \le \frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100}
+\mathbb{Account} \cdot mp_\mathcal{M} + \Delta mp_\mathcal{M} \le \frac{a_{bal} \times \mathsf{MPY}^\mathit{abs}}{100}
 $$
 
 ###### Update account State
@@ -549,7 +549,7 @@ Ensure the New Maximum MPs ($\mathbb{Account} \cdot mp_\mathcal{M} + \Delta \hat
 Absolute Maximum MPs:
 
 $$
-\mathbb{Account} \cdot mp_\mathcal{M} + \Delta \hat{mp}^\mathcal{B} \le \frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100}
+\mathbb{Account} \cdot mp_\mathcal{M} + \Delta \hat{mp}^\mathcal{B} \le \frac{a_{bal} \times \mathsf{MPY}^\mathit{abs}}{100}
 $$
 
 ###### Update account State
@@ -769,7 +769,7 @@ The maximum total multiplier points that can be generated for a determined amoun
 
 $$
 \boxed{
-	\hat{\mathcal{f}}mp_{\mathcal{M}}(a_{bal}, t_{\text{lock}}) = a_{bal} + \frac{a_{bal} \times \mathtt{APY} \times \left( M_{\text{MAX}} \times T_{\text{YEAR}} + t_{\text{lock}} \right)}{100 \times T_{\text{YEAR}}}
+	\hat{\mathcal{f}}mp_{\mathcal{M}}(a_{bal}, t_{lock}) = a_{bal} + \frac{a_{bal} \times \mathtt{APY} \times \left( M_{MAX} \times T_{YEAR} + t_{lock} \right)}{100 \times T_{YEAR}}
 }
 $$
 
@@ -790,7 +790,7 @@ time and the maximum accrued multiplier points.
 
 $$
 \boxed{
-	\hat{\mathcal{f}}mp_\mathcal{M}^\mathit{abs}(a_{bal}) = \frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100}
+	\hat{\mathcal{f}}mp_\mathcal{M}^\mathit{abs}(a_{bal}) = \frac{a_{bal} \times \mathsf{MPY}^\mathit{abs}}{100}
 }
 $$
 
@@ -805,7 +805,9 @@ Estimates the time an account set as locked time.
 
 $$
 \boxed{
-	\hat{\mathcal{f}}\tilde{t}_{lock}(mp_{\mathcal{M}}, a_{bal}) \approx \left\lceil \frac{(mp_{\mathcal{M}} - a_{bal}) \times 100 \times T_{YEAR}}{a_{bal} \times \mathtt{APY}}\right\rceil - T_{\text{YEAR}} \times M_{\text{MAX}}
+	\begin{equation}
+		\hat{\mathcal{f}}\tilde t_{lock}(mp_{\mathcal{M}}, a_{bal}) \approx \left\lceil \frac{(mp_{\mathcal{M}} - a_{bal}) \times 100 \times T_{YEAR}}{a_{bal} \times \mathtt{APY}}\right\rceil - T_{YEAR} \times M_{MAX}
+	\end{equation}
 }
 $$
 
@@ -825,6 +827,8 @@ Retrieves how much time lock can be increased for an account.
 
 $$
 \boxed{
-	t_{lock}^{rem}(a_{bal},mp_\mathcal{M}) \approx \frac{(\frac{a_{bal} \times \mathsf{MPY}_\mathit{abs}}{100} - mp_\mathcal{M})\times T_{YEAR}}{a_{bal}}
+	\begin{equation}
+		t_{lock}^{rem}(a_{bal},mp_\mathcal{M}) \approx \frac{(\frac{a_{bal} \times \mathsf{MPY}^\mathit{abs}}{100} - mp_\mathcal{M})\times T_{YEAR}}{a_{bal}}
+	\end{equation}
 }
 $$

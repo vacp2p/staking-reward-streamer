@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { RewardsStreamerMP } from "../src/RewardsStreamerMP.sol";
 import { StakeVault } from "../src/StakeVault.sol";
+import { StakeVaultNonTrusting } from "./harness/StakeVaultNonTrusting.sol";
 import { MockToken } from "./mocks/MockToken.sol";
 
 contract RewardsStreamerMPTest is Test {
@@ -109,6 +110,12 @@ contract RewardsStreamerMPTest is Test {
         StakeVault vault = StakeVault(vaults[account]);
         vm.prank(account);
         vault.emergencyExit(account);
+    }
+
+    function _leave(address account) public {
+        StakeVault vault = StakeVault(vaults[account]);
+        vm.prank(account);
+        vault.leave(account);
     }
 
     function _addReward(uint256 amount) public {
@@ -1777,5 +1784,81 @@ contract EmergencyExitTest is RewardsStreamerMPTest {
             alternateInitialBalance + 10e18,
             "Alternate address should get staked tokens"
         );
+    }
+}
+
+contract LeaveTest is RewardsStreamerMPTest {
+    StakeVaultNonTrusting public nonTrustingVault;
+
+    function setUp() public override {
+        super.setUp();
+
+        // set up vault that doesn't trust `streamer`
+        vm.startPrank(alice);
+        nonTrustingVault = new StakeVaultNonTrusting(alice, streamer);
+        stakingToken.approve(address(nonTrustingVault), 10_000e18);
+        vm.stopPrank();
+
+        // ensure non trusting vault is trusted by stake manager
+        streamer.setTrustedCodehash(address(nonTrustingVault).codehash, true);
+    }
+
+    function test_RevertWhenStakeManagerIsTrusted() public {
+        // this test uses the standard `StakeVault` which trusts the `streamer`
+        _stake(alice, 10e18, 0);
+        vm.expectRevert(StakeVault.StakeVault__NotAllowedToLeave.selector);
+        _leave(alice);
+    }
+
+    function test_LeaveShouldProperlyUpdateAccounting() public {
+        uint256 aliceInitialBalance = stakingToken.balanceOf(alice);
+
+        vm.prank(alice);
+        nonTrustingVault.stakeNonTrusted(100e18, 0);
+
+        assertEq(stakingToken.balanceOf(alice), aliceInitialBalance - 100e18, "Alice should have staked tokens");
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: 100e18,
+                totalMP: 100e18,
+                totalMaxMP: 500e18,
+                stakingBalance: 100e18,
+                rewardBalance: 0,
+                rewardIndex: 0,
+                accountedRewards: 0
+            })
+        );
+
+        vm.prank(alice);
+        nonTrustingVault.leave(alice);
+
+        // stake manager properly updates accounting
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: 0,
+                totalMP: 0,
+                totalMaxMP: 0,
+                stakingBalance: 0,
+                rewardBalance: 0,
+                rewardIndex: 0,
+                accountedRewards: 0
+            })
+        );
+
+        // vault should be empty as funds have been moved out
+        checkAccount(
+            CheckAccountParams({
+                account: address(nonTrustingVault),
+                rewardBalance: 0,
+                stakedBalance: 0,
+                vaultBalance: 0,
+                rewardIndex: 0,
+                accountMP: 0,
+                maxMP: 0
+            })
+        );
+
+        assertEq(stakingToken.balanceOf(alice), aliceInitialBalance, "Alice has all her funds back");
     }
 }

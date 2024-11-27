@@ -19,6 +19,8 @@ contract StakeVault is Ownable {
     error StakeVault__StakingFailed();
     error StakeVault__UnstakingFailed();
     error StakeVault__NotAllowedToExit();
+    error StakeVault__NotAllowedToLeave();
+    error StakeVault__StakeManagerImplementationNotTrusted();
 
     //STAKING_TOKEN must be kept as an immutable, otherwise, StakeManager would accept StakeVaults with any token
     //if is needed that STAKING_TOKEN to be a variable, StakeManager should be changed to check codehash and
@@ -42,6 +44,13 @@ contract StakeVault is Ownable {
         _;
     }
 
+    modifier onlyTrustedStakeManager() {
+        if (!_stakeManagerImplementationTrusted()) {
+            revert StakeVault__StakeManagerImplementationNotTrusted();
+        }
+        _;
+    }
+
     /**
      * @notice Initializes the contract with the owner, staked token, and stake manager.
      * @param _owner The address of the owner.
@@ -57,7 +66,7 @@ contract StakeVault is Ownable {
      * @param _amount The amount of tokens to stake.
      * @param _seconds The time period to stake for.
      */
-    function stake(uint256 _amount, uint256 _seconds) external onlyOwner {
+    function stake(uint256 _amount, uint256 _seconds) external onlyOwner onlyTrustedStakeManager {
         _stake(_amount, _seconds, msg.sender);
     }
 
@@ -67,7 +76,7 @@ contract StakeVault is Ownable {
      * @param _seconds The time period to stake for.
      * @param _from The address from which tokens will be transferred.
      */
-    function stake(uint256 _amount, uint256 _seconds, address _from) external onlyOwner {
+    function stake(uint256 _amount, uint256 _seconds, address _from) external onlyOwner onlyTrustedStakeManager {
         _stake(_amount, _seconds, _from);
     }
 
@@ -75,7 +84,7 @@ contract StakeVault is Ownable {
      * @notice Lock the staked amount for a specified time.
      * @param _seconds The time period to lock the staked amount for.
      */
-    function lock(uint256 _seconds) external onlyOwner {
+    function lock(uint256 _seconds) external onlyOwner onlyTrustedStakeManager {
         stakeManager.lock(_seconds);
     }
 
@@ -83,7 +92,7 @@ contract StakeVault is Ownable {
      * @notice Unstake a specified amount of tokens and send to the owner.
      * @param _amount The amount of tokens to unstake.
      */
-    function unstake(uint256 _amount) external onlyOwner {
+    function unstake(uint256 _amount) external onlyOwner onlyTrustedStakeManager {
         _unstake(_amount, msg.sender);
     }
 
@@ -92,8 +101,42 @@ contract StakeVault is Ownable {
      * @param _amount The amount of tokens to unstake.
      * @param _destination The address to receive the unstaked tokens.
      */
-    function unstake(uint256 _amount, address _destination) external onlyOwner validDestination(_destination) {
+    function unstake(
+        uint256 _amount,
+        address _destination
+    )
+        external
+        onlyOwner
+        validDestination(_destination)
+        onlyTrustedStakeManager
+    {
         _unstake(_amount, _destination);
+    }
+
+    /**
+     * @notice Withdraw all tokens from the contract to the owner.
+     */
+    function leave(address _destination) external onlyOwner validDestination(_destination) {
+        if (_stakeManagerImplementationTrusted()) {
+            // If the stakeManager is trusted, the vault cannot leave the system
+            // and has to properly unstake instead (which might not be possible if
+            // funds are locked).
+            revert StakeVault__NotAllowedToLeave();
+        }
+
+        // If the stakeManager is not trusted, we know there was an upgrade.
+        // In this case, vaults are free to leave the system and move their funds back
+        // to the owner.
+        //
+        // We have to `try/catch` here in case the upgrade was malicious and `leave()`
+        // either doesn't exist on the new stake manager or reverts for some reason.
+        // If it was a benign upgrade, it will cause the stake manager to properly update
+        // its internal accounting before we move the funds out.
+        try stakeManager.leave() {
+            STAKING_TOKEN.transfer(_destination, STAKING_TOKEN.balanceOf(address(this)));
+        } catch {
+            STAKING_TOKEN.transfer(_destination, STAKING_TOKEN.balanceOf(address(this)));
+        }
     }
 
     /**
@@ -136,13 +179,11 @@ contract StakeVault is Ownable {
     }
 
     function _stake(uint256 _amount, uint256 _seconds, address _source) internal {
+        stakeManager.stake(_amount, _seconds);
         bool success = STAKING_TOKEN.transferFrom(_source, address(this), _amount);
         if (!success) {
             revert StakeVault__StakingFailed();
         }
-
-        stakeManager.stake(_amount, _seconds);
-
         emit Staked(_source, address(this), _amount, _seconds);
     }
 
@@ -183,5 +224,9 @@ contract StakeVault is Ownable {
         } catch {
             STAKING_TOKEN.transfer(_destination, STAKING_TOKEN.balanceOf(address(this)));
         }
+    }
+
+    function _stakeManagerImplementationTrusted() internal pure virtual returns (bool) {
+        return true;
     }
 }

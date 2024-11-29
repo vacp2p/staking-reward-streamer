@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { UnsafeUpgrades } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { Test } from "forge-std/Test.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { RewardsStreamerMP } from "../src/RewardsStreamerMP.sol";
@@ -10,6 +11,7 @@ import { MockToken } from "./mocks/MockToken.sol";
 contract RewardsStreamerMPTest is Test {
     MockToken rewardToken;
     MockToken stakingToken;
+    RewardsStreamerMP public streamer_implementation;
     RewardsStreamerMP public streamer;
 
     address admin = makeAddr("admin");
@@ -23,7 +25,15 @@ contract RewardsStreamerMPTest is Test {
     function setUp() public virtual {
         rewardToken = new MockToken("Reward Token", "RT");
         stakingToken = new MockToken("Staking Token", "ST");
-        streamer = new RewardsStreamerMP(address(this), address(stakingToken), address(rewardToken));
+        streamer_implementation = new RewardsStreamerMP();
+        streamer = RewardsStreamerMP(
+            UnsafeUpgrades.deployUUPSProxy(
+                address(streamer_implementation),
+                abi.encodeCall(
+                    RewardsStreamerMP.initialize, (address(this), address(stakingToken), address(rewardToken))
+                )
+            )
+        );
 
         address[4] memory accounts = [alice, bob, charlie, dave];
         for (uint256 i = 0; i < accounts.length; i++) {

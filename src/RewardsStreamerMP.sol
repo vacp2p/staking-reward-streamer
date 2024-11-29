@@ -9,7 +9,7 @@ import { IStakeManager } from "./interfaces/IStakeManager.sol";
 import { TrustedCodehashAccess } from "./TrustedCodehashAccess.sol";
 
 // Rewards Streamer with Multiplier Points
-contract RewardsStreamerMP is UUPSUpgradeable, Initializable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardTransient {
+contract RewardsStreamerMP is UUPSUpgradeable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardTransient {
     error StakingManager__AmountCannotBeZero();
     error StakingManager__TransferFailed();
     error StakingManager__InsufficientBalance();
@@ -55,16 +55,12 @@ contract RewardsStreamerMP is UUPSUpgradeable, Initializable, IStakeManager, Tru
         _;
     }
 
-    constructor() TrustedCodehashAccess(msg.sender) {
-        _transferOwnership(address(0));
+    constructor() {
         _disableInitializers();
     }
-    
+
     function initialize(address _owner, address _stakingToken, address _rewardToken) public initializer {
-        if (_owner == address(0)) {
-            revert OwnableInvalidOwner(address(0));
-        }
-        _transferOwnership(_owner);
+        __TrustedCodehashAccess_init(_owner);
 
         STAKING_TOKEN = IERC20(_stakingToken);
         REWARD_TOKEN = IERC20(_rewardToken);

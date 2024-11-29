@@ -2,12 +2,13 @@
 pragma solidity ^0.8.26;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IStakeManager } from "./interfaces/IStakeManager.sol";
 import { TrustedCodehashAccess } from "./TrustedCodehashAccess.sol";
 
 // Rewards Streamer with Multiplier Points
-contract RewardsStreamerMP is IStakeManager, TrustedCodehashAccess, ReentrancyGuard {
+contract RewardsStreamerMP is Initializable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardTransient {
     error StakingManager__AmountCannotBeZero();
     error StakingManager__TransferFailed();
     error StakingManager__InsufficientBalance();
@@ -17,8 +18,8 @@ contract RewardsStreamerMP is IStakeManager, TrustedCodehashAccess, ReentrancyGu
     error StakingManager__AlreadyLocked();
     error StakingManager__EmergencyModeEnabled();
 
-    IERC20 public immutable STAKING_TOKEN;
-    IERC20 public immutable REWARD_TOKEN;
+    IERC20 public STAKING_TOKEN;
+    IERC20 public REWARD_TOKEN;
 
     uint256 public constant SCALE_FACTOR = 1e18;
     uint256 public constant MP_RATE_PER_YEAR = 1e18;
@@ -54,6 +55,17 @@ contract RewardsStreamerMP is IStakeManager, TrustedCodehashAccess, ReentrancyGu
     }
 
     constructor(address _owner, address _stakingToken, address _rewardToken) TrustedCodehashAccess(_owner) {
+        STAKING_TOKEN = IERC20(_stakingToken);
+        REWARD_TOKEN = IERC20(_rewardToken);
+        lastMPUpdatedTime = block.timestamp;
+    }
+    
+    function initialize(address _owner, address _stakingToken, address _rewardToken) public initializer {
+        if (_owner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(_owner);
+
         STAKING_TOKEN = IERC20(_stakingToken);
         REWARD_TOKEN = IERC20(_rewardToken);
         lastMPUpdatedTime = block.timestamp;

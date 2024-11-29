@@ -4,11 +4,12 @@ pragma solidity ^0.8.26;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { IStakeManager } from "./interfaces/IStakeManager.sol";
 import { TrustedCodehashAccess } from "./TrustedCodehashAccess.sol";
 
 // Rewards Streamer with Multiplier Points
-contract RewardsStreamerMP is Initializable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardTransient {
+contract RewardsStreamerMP is UUPSUpgradeable, Initializable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardTransient {
     error StakingManager__AmountCannotBeZero();
     error StakingManager__TransferFailed();
     error StakingManager__InsufficientBalance();
@@ -54,10 +55,9 @@ contract RewardsStreamerMP is Initializable, IStakeManager, TrustedCodehashAcces
         _;
     }
 
-    constructor(address _owner, address _stakingToken, address _rewardToken) TrustedCodehashAccess(_owner) {
-        STAKING_TOKEN = IERC20(_stakingToken);
-        REWARD_TOKEN = IERC20(_rewardToken);
-        lastMPUpdatedTime = block.timestamp;
+    constructor() TrustedCodehashAccess(msg.sender) {
+        _transferOwnership(address(0));
+        _disableInitializers();
     }
     
     function initialize(address _owner, address _stakingToken, address _rewardToken) public initializer {
@@ -69,6 +69,10 @@ contract RewardsStreamerMP is Initializable, IStakeManager, TrustedCodehashAcces
         STAKING_TOKEN = IERC20(_stakingToken);
         REWARD_TOKEN = IERC20(_rewardToken);
         lastMPUpdatedTime = block.timestamp;
+    }
+
+    function _authorizeUpgrade(address) internal view override {
+        _checkOwner();
     }
 
     function stake(uint256 amount, uint256 lockPeriod) external onlyTrustedCodehash onlyNotEmergencyMode nonReentrant {

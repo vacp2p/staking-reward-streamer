@@ -2,14 +2,14 @@
 pragma solidity ^0.8.26;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IStakeManager } from "./interfaces/IStakeManager.sol";
 import { TrustedCodehashAccess } from "./TrustedCodehashAccess.sol";
 
 // Rewards Streamer with Multiplier Points
-contract RewardsStreamerMP is UUPSUpgradeable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardTransient {
+contract RewardsStreamerMP is UUPSUpgradeable, IStakeManager, TrustedCodehashAccess, ReentrancyGuardUpgradeable {
     error StakingManager__AmountCannotBeZero();
     error StakingManager__TransferFailed();
     error StakingManager__InsufficientBalance();
@@ -60,6 +60,7 @@ contract RewardsStreamerMP is UUPSUpgradeable, IStakeManager, TrustedCodehashAcc
     }
 
     function initialize(address _owner, address _stakingToken, address _rewardToken) public initializer {
+        __ReentrancyGuard_init();
         __TrustedCodehashAccess_init(_owner);
 
         STAKING_TOKEN = IERC20(_stakingToken);

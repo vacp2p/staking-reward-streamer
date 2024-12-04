@@ -40,7 +40,7 @@ contract RewardsStreamerMP is
     uint256 public constant MAX_MULTIPLIER = 4;
 
     uint256 public totalStaked;
-    uint256 public totalMP;
+    uint256 public totalMPAccrued;
     uint256 public totalMaxMP;
     uint256 public rewardIndex;
     uint256 public lastMPUpdatedTime;
@@ -219,7 +219,7 @@ contract RewardsStreamerMP is
         uint256 accountMP = initialMP + bonusMP;
 
         account.accountMP += accountMP;
-        totalMP += accountMP;
+        totalMPAccrued += accountMP;
 
         account.maxMP += accountMaxMP;
         totalMaxMP += accountMaxMP;
@@ -259,7 +259,7 @@ contract RewardsStreamerMP is
         account.maxMP += additionalBonusMP;
 
         // Update global state
-        totalMP += additionalBonusMP;
+        totalMPAccrued += additionalBonusMP;
         totalMaxMP += additionalBonusMP;
 
         account.accountRewardIndex = rewardIndex;
@@ -296,7 +296,7 @@ contract RewardsStreamerMP is
         account.accountMP -= mpToReduce;
         account.maxMP -= maxMPToReduce;
         account.accountRewardIndex = rewardIndex;
-        totalMP -= mpToReduce;
+        totalMPAccrued -= mpToReduce;
         totalMaxMP -= maxMPToReduce;
         totalStaked -= amount;
     }
@@ -341,15 +341,15 @@ contract RewardsStreamerMP is
         }
 
         uint256 accruedMP = (timeDiff * totalStaked * MP_RATE_PER_YEAR) / (365 days * SCALE_FACTOR);
-        if (totalMP + accruedMP > totalMaxMP) {
-            accruedMP = totalMaxMP - totalMP;
+        if (totalMPAccrued + accruedMP > totalMaxMP) {
+            accruedMP = totalMaxMP - totalMPAccrued;
         }
 
         // Adjust rewardIndex before updating totalMP
-        uint256 previousTotalWeight = totalStaked + totalMP;
-        totalMP += accruedMP;
+        uint256 previousTotalWeight = totalStaked + totalMPAccrued;
+        totalMPAccrued += accruedMP;
 
-        uint256 newTotalWeight = totalStaked + totalMP;
+        uint256 newTotalWeight = totalStaked + totalMPAccrued;
 
         if (previousTotalWeight != 0 && newTotalWeight != previousTotalWeight) {
             rewardIndex = (rewardIndex * previousTotalWeight) / newTotalWeight;
@@ -404,7 +404,7 @@ contract RewardsStreamerMP is
     }
 
     function updateRewardIndex() internal {
-        uint256 totalWeight = totalStaked + totalMP;
+        uint256 totalWeight = totalStaked + totalMPAccrued;
         if (totalWeight == 0) {
             return;
         }

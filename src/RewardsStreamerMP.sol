@@ -132,7 +132,7 @@ contract RewardsStreamerMP is
      * @param user The address of the user
      * @return The total multiplier points for the user
      */
-    function getUserTotalMP(address user) external view returns (uint256) {
+    function mpBalanceOfUser(address user) external view returns (uint256) {
         address[] memory userVaults = vaults[user];
         uint256 userTotalMP = 0;
 

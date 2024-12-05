@@ -102,7 +102,7 @@ contract RewardsStreamerMPTest is Test {
 
     function checkUserTotals(CheckUserTotalsParams memory p) public view {
         assertEq(streamer.getUserTotalStakedBalance(p.user), p.totalStakedBalance, "wrong user total stake balance");
-        assertEq(streamer.getUserTotalMP(p.user), p.totalMPAccrued, "wrong user total MP");
+        assertEq(streamer.mpBalanceOfUser(p.user), p.totalMPAccrued, "wrong user total MP");
         assertEq(streamer.getUserTotalMaxMP(p.user), p.totalMaxMP, "wrong user total MP");
     }
 

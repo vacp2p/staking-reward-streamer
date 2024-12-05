@@ -833,7 +833,7 @@ contract StakeTest is RewardsStreamerMPTest {
         );
 
         uint256 currentTime = vm.getBlockTimestamp();
-        uint256 timeToMaxMP = _calculateTimeToAccureMP(stakeAmount, totalMaxMP - totalMP);
+        uint256 timeToMaxMP = _calculateTimeToAccureMP(stakeAmount, totalMaxMP - totalMPAccrued);
         vm.warp(currentTime + timeToMaxMP);
 
         streamer.updateGlobalState();

@@ -404,9 +404,22 @@ contract RewardsStreamerMP is
     }
 
     function updateRewardIndex() internal {
+        uint256 accruedRewards;
+        uint256 newRewardIndex;
+
+        (accruedRewards, newRewardIndex) = _pendingRewardIndex();
+        totalRewardsAccrued += accruedRewards;
+
+        if (newRewardIndex > rewardIndex) {
+            rewardIndex = newRewardIndex;
+            lastRewardTime = block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime;
+        }
+    }
+
+    function _pendingRewardIndex() internal view returns (uint256, uint256) {
         uint256 totalWeight = totalStaked + totalMPAccrued;
         if (totalWeight == 0) {
-            return;
+            return (0, rewardIndex);
         }
 
         uint256 currentTime = block.timestamp;
@@ -414,17 +427,17 @@ contract RewardsStreamerMP is
         uint256 elapsedTime = applicableTime - lastRewardTime;
 
         if (elapsedTime == 0) {
-            return;
+            return (0, rewardIndex);
         }
 
-        uint256 newRewards = _calculatePendingRewards();
-        if (newRewards == 0) {
-            return;
+        uint256 accruedRewards = _calculatePendingRewards();
+        if (accruedRewards == 0) {
+            return (0, rewardIndex);
         }
 
-        totalRewardsAccrued += newRewards;
-        rewardIndex += (newRewards * SCALE_FACTOR) / totalWeight;
-        lastRewardTime = block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime;
+        uint256 newRewardIndex = rewardIndex + ((accruedRewards * SCALE_FACTOR) / totalWeight);
+
+        return (accruedRewards, newRewardIndex);
     }
 
     function _calculateBonusMP(uint256 amount, uint256 lockPeriod) internal pure returns (uint256) {
@@ -462,15 +475,6 @@ contract RewardsStreamerMP is
         _updateAccountMP(accountAddress);
     }
 
-    function calculateAccountRewards(address accountAddress) public view returns (uint256) {
-        Account storage account = accounts[accountAddress];
-
-        uint256 accountWeight = account.stakedBalance + account.mpAccrued;
-        uint256 deltaRewardIndex = rewardIndex - account.accountRewardIndex;
-
-        return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
-    }
-
     function enableEmergencyMode() external onlyOwner {
         if (emergencyModeEnabled) {
             revert StakingManager__EmergencyModeEnabled();
@@ -491,6 +495,23 @@ contract RewardsStreamerMP is
     }
 
     function rewardsBalanceOf(address accountAddress) external view returns (uint256) {
-        return calculateAccountRewards(accountAddress);
+        uint256 newRewardIndex;
+        (, newRewardIndex) = _pendingRewardIndex();
+
+        Account storage account = accounts[accountAddress];
+
+        uint256 accountWeight = account.stakedBalance + _mpBalanceOf(accountAddress);
+        uint256 deltaRewardIndex = newRewardIndex - account.accountRewardIndex;
+
+        return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
+    }
+
+    function _mpBalanceOf(address accountAddress) internal view returns (uint256) {
+        Account storage account = accounts[accountAddress];
+        return account.mpAccrued + _getAccountPendingdMP(account);
+    }
+
+    function mpBalanceOf(address accountAddress) external view returns (uint256) {
+        return _mpBalanceOf(accountAddress);
     }
 }

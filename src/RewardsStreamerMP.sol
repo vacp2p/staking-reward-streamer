@@ -138,7 +138,7 @@ contract RewardsStreamerMP is
 
         for (uint256 i = 0; i < userVaults.length; i++) {
             Account storage account = accounts[userVaults[i]];
-            userTotalMP += account.mpAccrued + _getAccountAccruedMP(account);
+            userTotalMP += account.mpAccrued + _getAccountPendingdMP(account);
         }
         return userTotalMP;
     }
@@ -432,7 +432,7 @@ contract RewardsStreamerMP is
         return amount * lockMultiplier / SCALE_FACTOR;
     }
 
-    function _getAccountAccruedMP(Account storage account) internal view returns (uint256) {
+    function _getAccountPendingdMP(Account storage account) internal view returns (uint256) {
         if (account.maxMP == 0 || account.stakedBalance == 0) {
             return 0;
         }
@@ -452,7 +452,7 @@ contract RewardsStreamerMP is
 
     function _updateAccountMP(address accountAddress) internal {
         Account storage account = accounts[accountAddress];
-        uint256 accruedMP = _getAccountAccruedMP(account);
+        uint256 accruedMP = _getAccountPendingdMP(account);
 
         account.mpAccrued += accruedMP;
         account.lastMPUpdateTime = block.timestamp;

@@ -40,7 +40,7 @@ contract RewardsStreamerMP is
     uint256 public constant MAX_MULTIPLIER = 4;
 
     uint256 public totalStaked;
-    uint256 public totalMP;
+    uint256 public totalMPAccrued;
     uint256 public totalMaxMP;
     uint256 public rewardIndex;
     uint256 public lastMPUpdatedTime;
@@ -55,7 +55,7 @@ contract RewardsStreamerMP is
     struct Account {
         uint256 stakedBalance;
         uint256 accountRewardIndex;
-        uint256 accountMP;
+        uint256 mpAccrued;
         uint256 maxMP;
         uint256 lastMPUpdateTime;
         uint256 lockUntil;
@@ -132,13 +132,13 @@ contract RewardsStreamerMP is
      * @param user The address of the user
      * @return The total multiplier points for the user
      */
-    function getUserTotalMP(address user) external view returns (uint256) {
+    function mpBalanceOfUser(address user) external view returns (uint256) {
         address[] memory userVaults = vaults[user];
         uint256 userTotalMP = 0;
 
         for (uint256 i = 0; i < userVaults.length; i++) {
             Account storage account = accounts[userVaults[i]];
-            userTotalMP += account.accountMP + _getAccountAccruedMP(account);
+            userTotalMP += account.mpAccrued + _getAccountPendingdMP(account);
         }
         return userTotalMP;
     }
@@ -218,8 +218,8 @@ contract RewardsStreamerMP is
         uint256 accountMaxMP = initialMP + bonusMP + potentialMP;
         uint256 accountMP = initialMP + bonusMP;
 
-        account.accountMP += accountMP;
-        totalMP += accountMP;
+        account.mpAccrued += accountMP;
+        totalMPAccrued += accountMP;
 
         account.maxMP += accountMaxMP;
         totalMaxMP += accountMaxMP;
@@ -255,11 +255,11 @@ contract RewardsStreamerMP is
 
         // Update account state
         account.lockUntil = block.timestamp + lockPeriod;
-        account.accountMP += additionalBonusMP;
+        account.mpAccrued += additionalBonusMP;
         account.maxMP += additionalBonusMP;
 
         // Update global state
-        totalMP += additionalBonusMP;
+        totalMPAccrued += additionalBonusMP;
         totalMaxMP += additionalBonusMP;
 
         account.accountRewardIndex = rewardIndex;
@@ -289,14 +289,14 @@ contract RewardsStreamerMP is
 
         uint256 previousStakedBalance = account.stakedBalance;
 
-        uint256 mpToReduce = (account.accountMP * amount * SCALE_FACTOR) / (previousStakedBalance * SCALE_FACTOR);
+        uint256 mpToReduce = (account.mpAccrued * amount * SCALE_FACTOR) / (previousStakedBalance * SCALE_FACTOR);
         uint256 maxMPToReduce = (account.maxMP * amount * SCALE_FACTOR) / (previousStakedBalance * SCALE_FACTOR);
 
         account.stakedBalance -= amount;
-        account.accountMP -= mpToReduce;
+        account.mpAccrued -= mpToReduce;
         account.maxMP -= maxMPToReduce;
         account.accountRewardIndex = rewardIndex;
-        totalMP -= mpToReduce;
+        totalMPAccrued -= mpToReduce;
         totalMaxMP -= maxMPToReduce;
         totalStaked -= amount;
     }
@@ -341,15 +341,15 @@ contract RewardsStreamerMP is
         }
 
         uint256 accruedMP = (timeDiff * totalStaked * MP_RATE_PER_YEAR) / (365 days * SCALE_FACTOR);
-        if (totalMP + accruedMP > totalMaxMP) {
-            accruedMP = totalMaxMP - totalMP;
+        if (totalMPAccrued + accruedMP > totalMaxMP) {
+            accruedMP = totalMaxMP - totalMPAccrued;
         }
 
         // Adjust rewardIndex before updating totalMP
-        uint256 previousTotalWeight = totalStaked + totalMP;
-        totalMP += accruedMP;
+        uint256 previousTotalWeight = totalStaked + totalMPAccrued;
+        totalMPAccrued += accruedMP;
 
-        uint256 newTotalWeight = totalStaked + totalMP;
+        uint256 newTotalWeight = totalStaked + totalMPAccrued;
 
         if (previousTotalWeight != 0 && newTotalWeight != previousTotalWeight) {
             rewardIndex = (rewardIndex * previousTotalWeight) / newTotalWeight;
@@ -404,9 +404,22 @@ contract RewardsStreamerMP is
     }
 
     function updateRewardIndex() internal {
-        uint256 totalWeight = totalStaked + totalMP;
+        uint256 accruedRewards;
+        uint256 newRewardIndex;
+
+        (accruedRewards, newRewardIndex) = _pendingRewardIndex();
+        totalRewardsAccrued += accruedRewards;
+
+        if (newRewardIndex > rewardIndex) {
+            rewardIndex = newRewardIndex;
+            lastRewardTime = block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime;
+        }
+    }
+
+    function _pendingRewardIndex() internal view returns (uint256, uint256) {
+        uint256 totalWeight = totalStaked + totalMPAccrued;
         if (totalWeight == 0) {
-            return;
+            return (0, rewardIndex);
         }
 
         uint256 currentTime = block.timestamp;
@@ -414,17 +427,17 @@ contract RewardsStreamerMP is
         uint256 elapsedTime = applicableTime - lastRewardTime;
 
         if (elapsedTime == 0) {
-            return;
+            return (0, rewardIndex);
         }
 
-        uint256 newRewards = _calculatePendingRewards();
-        if (newRewards == 0) {
-            return;
+        uint256 accruedRewards = _calculatePendingRewards();
+        if (accruedRewards == 0) {
+            return (0, rewardIndex);
         }
 
-        totalRewardsAccrued += newRewards;
-        rewardIndex += (newRewards * SCALE_FACTOR) / totalWeight;
-        lastRewardTime = block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime;
+        uint256 newRewardIndex = rewardIndex + ((accruedRewards * SCALE_FACTOR) / totalWeight);
+
+        return (accruedRewards, newRewardIndex);
     }
 
     function _calculateBonusMP(uint256 amount, uint256 lockPeriod) internal pure returns (uint256) {
@@ -432,7 +445,7 @@ contract RewardsStreamerMP is
         return amount * lockMultiplier / SCALE_FACTOR;
     }
 
-    function _getAccountAccruedMP(Account storage account) internal view returns (uint256) {
+    function _getAccountPendingdMP(Account storage account) internal view returns (uint256) {
         if (account.maxMP == 0 || account.stakedBalance == 0) {
             return 0;
         }
@@ -444,31 +457,22 @@ contract RewardsStreamerMP is
 
         uint256 accruedMP = (timeDiff * account.stakedBalance * MP_RATE_PER_YEAR) / (365 days * SCALE_FACTOR);
 
-        if (account.accountMP + accruedMP > account.maxMP) {
-            accruedMP = account.maxMP - account.accountMP;
+        if (account.mpAccrued + accruedMP > account.maxMP) {
+            accruedMP = account.maxMP - account.mpAccrued;
         }
         return accruedMP;
     }
 
     function _updateAccountMP(address accountAddress) internal {
         Account storage account = accounts[accountAddress];
-        uint256 accruedMP = _getAccountAccruedMP(account);
+        uint256 accruedMP = _getAccountPendingdMP(account);
 
-        account.accountMP += accruedMP;
+        account.mpAccrued += accruedMP;
         account.lastMPUpdateTime = block.timestamp;
     }
 
     function updateAccountMP(address accountAddress) external onlyNotEmergencyMode {
         _updateAccountMP(accountAddress);
-    }
-
-    function calculateAccountRewards(address accountAddress) public view returns (uint256) {
-        Account storage account = accounts[accountAddress];
-
-        uint256 accountWeight = account.stakedBalance + account.accountMP;
-        uint256 deltaRewardIndex = rewardIndex - account.accountRewardIndex;
-
-        return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
     }
 
     function enableEmergencyMode() external onlyOwner {
@@ -491,6 +495,23 @@ contract RewardsStreamerMP is
     }
 
     function rewardsBalanceOf(address accountAddress) external view returns (uint256) {
-        return calculateAccountRewards(accountAddress);
+        uint256 newRewardIndex;
+        (, newRewardIndex) = _pendingRewardIndex();
+
+        Account storage account = accounts[accountAddress];
+
+        uint256 accountWeight = account.stakedBalance + _mpBalanceOf(accountAddress);
+        uint256 deltaRewardIndex = newRewardIndex - account.accountRewardIndex;
+
+        return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
+    }
+
+    function _mpBalanceOf(address accountAddress) internal view returns (uint256) {
+        Account storage account = accounts[accountAddress];
+        return account.mpAccrued + _getAccountPendingdMP(account);
+    }
+
+    function mpBalanceOf(address accountAddress) external view returns (uint256) {
+        return _mpBalanceOf(accountAddress);
     }
 }

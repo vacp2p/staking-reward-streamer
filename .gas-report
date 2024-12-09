@@ -14,6 +14,14 @@
 | activeNetworkConfig                                     | 454             | 454 | 454    | 454 | 114     |
 
 
+| script/UpgradeRewardsStreamerMP.s.sol:UpgradeRewardsStreamerMPScript contract |                 |         |         |         |         |
+|-------------------------------------------------------------------------------|-----------------|---------|---------|---------|---------|
+| Deployment Cost                                                               | Deployment Size |         |         |         |         |
+| 2845816                                                                       | 14079           |         |         |         |         |
+| Function Name                                                                 | min             | avg     | median  | max     | # calls |
+| run                                                                           | 2383391         | 2383391 | 2383391 | 2383391 | 3       |
+
+
 | src/RewardsStreamer.sol:RewardsStreamer contract |                 |        |        |        |         |
 |--------------------------------------------------|-----------------|--------|--------|--------|---------|
 | Deployment Cost                                  | Deployment Size |        |        |        |         |
@@ -66,7 +74,7 @@
 | unstake                                              | 60382           | 60919  | 60382  | 63877  | 13      |
 | updateAccountMP                                      | 15396           | 18474  | 17898  | 34998  | 21      |
 | updateGlobalState                                    | 11088           | 28045  | 25249  | 110284 | 21      |
-| upgradeToAndCall                                     | 3225            | 9387   | 10926  | 10936  | 5       |
+| upgradeToAndCall                                     | 3225            | 7887   | 8426   | 10936  | 5       |
 
 
 | src/StakeManagerProxy.sol:StakeManagerProxy contract |                 |       |        |        |         |
@@ -101,7 +109,7 @@
 | totalStaked                                          | 823             | 823   | 823    | 823    | 82      |
 | updateAccountMP                                      | 41755           | 44833 | 44257  | 61357  | 21      |
 | updateGlobalState                                    | 37076           | 54033 | 51237  | 136272 | 21      |
-| upgradeToAndCall                                     | 29868           | 36025 | 37562  | 37572  | 5       |
+| upgradeToAndCall                                     | 29868           | 33720 | 33720  | 37572  | 2       |
 
 
 | src/StakeVault.sol:StakeVault contract |                 |        |        |        |         |

@@ -7,14 +7,14 @@ methods {
   function ERC20A.balanceOf(address) external returns (uint256) envfree;
   function ERC20A.allowance(address, address) external returns(uint256) envfree;
   function ERC20A.totalSupply() external returns(uint256) envfree;
-  function RewardsStreamerMP.accounts(address) external returns(uint256, uint256, uint256, uint256, uint256, uint256) envfree;
+  function RewardsStreamerMP.vaultData(address) external returns(uint256, uint256, uint256, uint256, uint256, uint256) envfree;
   function _.owner() external => DISPATCHER(true);
   function _.transfer(address, uint256) external => DISPATCHER(true);
 }
 
-// check that the ERC20.balanceOf(vault) is >= to StakeManager.accounts[a].balance
+// check that the ERC20.balanceOf(vault) is >= to StakeManager.vaultData[a].balance
 invariant accountBalanceVsERC20Balance()
-  staked.balanceOf(currentContract) >= getAccountStakedBalance(currentContract)
+  staked.balanceOf(currentContract) >= getVaultStakedBalance(currentContract)
   { preserved with (env e) {
       // the sender can't be the vault otherwise it can transfer tokens
       require e.msg.sender != currentContract;

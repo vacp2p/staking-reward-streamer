@@ -54,16 +54,16 @@ contract RewardsStreamerMP is
     uint256 public rewardStartTime;
     uint256 public rewardEndTime;
 
-    struct Account {
+    struct VaultData {
         uint256 stakedBalance;
-        uint256 accountRewardIndex;
-        uint256 accountMP;
+        uint256 rewardIndex;
+        uint256 mp;
         uint256 maxMP;
         uint256 lastMPUpdateTime;
         uint256 lockUntil;
     }
 
-    mapping(address vault => Account data) public accounts;
+    mapping(address vault => VaultData data) public vaultData;
     mapping(address owner => address[] vault) public vaults;
     mapping(address vault => address owner) public vaultOwners;
 
@@ -121,60 +121,60 @@ contract RewardsStreamerMP is
 
     /**
      * @notice Get the vaults owned by a user
-     * @param user The address of the user
+     * @param account The address of the user
      * @return The vaults owned by the user
      */
-    function getUserVaults(address user) external view returns (address[] memory) {
-        return vaults[user];
+    function getAccountVaults(address account) external view returns (address[] memory) {
+        return vaults[account];
     }
 
     /**
      * @notice Get the total multiplier points for a user
      * @dev Iterates over all vaults owned by the user and sums the multiplier points
-     * @param user The address of the user
+     * @param account The address of the user
      * @return The total multiplier points for the user
      */
-    function getUserTotalMP(address user) external view returns (uint256) {
-        address[] memory userVaults = vaults[user];
-        uint256 userTotalMP = 0;
+    function getAccountTotalMP(address account) external view returns (uint256) {
+        address[] memory accountVaults = vaults[account];
+        uint256 accountTotalMP = 0;
 
-        for (uint256 i = 0; i < userVaults.length; i++) {
-            Account storage account = accounts[userVaults[i]];
-            userTotalMP += account.accountMP + _getAccountAccruedMP(account);
+        for (uint256 i = 0; i < accountVaults.length; i++) {
+            VaultData storage vault = vaultData[accountVaults[i]];
+            accountTotalMP += vault.mp + _getVaultAccruedMP(vault);
         }
-        return userTotalMP;
+        return accountTotalMP;
     }
 
     /**
      * @notice Get the total maximum multiplier points for a user
      * @dev Iterates over all vaults owned by the user and sums the maximum multiplier points
-     * @param user The address of the user
+     * @param account The address of the acocunt
      * @return The total maximum multiplier points for the user
      */
-    function getUserTotalMaxMP(address user) external view returns (uint256) {
-        address[] memory userVaults = vaults[user];
-        uint256 userTotalMaxMP = 0;
+    function getAccountTotalMaxMP(address account) external view returns (uint256) {
+        address[] memory accountVaults = vaults[account];
+        uint256 accountTotalMaxMP = 0;
 
-        for (uint256 i = 0; i < userVaults.length; i++) {
-            userTotalMaxMP += accounts[userVaults[i]].maxMP;
+        for (uint256 i = 0; i < accountVaults.length; i++) {
+            accountTotalMaxMP += vaultData[accountVaults[i]].maxMP;
         }
-        return userTotalMaxMP;
+        return accountTotalMaxMP;
     }
 
     /**
      * @notice Get the total staked balance for a user
      * @dev Iterates over all vaults owned by the user and sums the staked balances
-     * @param user The address of the user
+     * @param account The address of the user
      * @return The total staked balance for the user
      */
-    function getUserTotalStakedBalance(address user) external view returns (uint256) {
-        address[] memory userVaults = vaults[user];
-        uint256 userTotalStake = 0;
+    function getAccountTotalStakedBalance(address account) external view returns (uint256) {
+        address[] memory accountVaults = vaults[account];
+        uint256 accountTotalStake = 0;
 
-        for (uint256 i = 0; i < userVaults.length; i++) {
-            userTotalStake += accounts[userVaults[i]].stakedBalance;
+        for (uint256 i = 0; i < accountVaults.length; i++) {
+            accountTotalStake += vaultData[accountVaults[i]].stakedBalance;
         }
-        return userTotalStake;
+        return accountTotalStake;
     }
 
     function stake(
@@ -196,14 +196,14 @@ contract RewardsStreamerMP is
         }
 
         _updateGlobalState();
-        _updateAccountMP(msg.sender);
+        _updateVaultMP(msg.sender);
 
-        Account storage account = accounts[msg.sender];
-        if (account.lockUntil != 0 && account.lockUntil > block.timestamp) {
+        VaultData storage vault = vaultData[msg.sender];
+        if (vault.lockUntil != 0 && vault.lockUntil > block.timestamp) {
             revert StakingManager__CannotRestakeWithLockedFunds();
         }
 
-        account.stakedBalance += amount;
+        vault.stakedBalance += amount;
         totalStaked += amount;
 
         uint256 initialMP = amount;
@@ -212,21 +212,21 @@ contract RewardsStreamerMP is
 
         if (lockPeriod != 0) {
             bonusMP = _calculateBonusMP(amount, lockPeriod);
-            account.lockUntil = block.timestamp + lockPeriod;
+            vault.lockUntil = block.timestamp + lockPeriod;
         } else {
-            account.lockUntil = 0;
+            vault.lockUntil = 0;
         }
 
-        uint256 accountMaxMP = initialMP + bonusMP + potentialMP;
-        uint256 accountMP = initialMP + bonusMP;
+        uint256 vaultMaxMP = initialMP + bonusMP + potentialMP;
+        uint256 vaultMP = initialMP + bonusMP;
 
-        account.accountMP += accountMP;
-        totalMP += accountMP;
+        vault.mp += vaultMP;
+        totalMP += vaultMP;
 
-        account.maxMP += accountMaxMP;
-        totalMaxMP += accountMaxMP;
+        vault.maxMP += vaultMaxMP;
+        totalMaxMP += vaultMaxMP;
 
-        account.accountRewardIndex = rewardIndex;
+        vault.rewardIndex = rewardIndex;
     }
 
     function lock(uint256 lockPeriod)
@@ -240,31 +240,31 @@ contract RewardsStreamerMP is
             revert StakingManager__InvalidLockingPeriod();
         }
 
-        Account storage account = accounts[msg.sender];
+        VaultData storage vault = vaultData[msg.sender];
 
-        if (account.lockUntil > 0) {
+        if (vault.lockUntil > 0) {
             revert StakingManager__AlreadyLocked();
         }
 
-        if (account.stakedBalance == 0) {
+        if (vault.stakedBalance == 0) {
             revert StakingManager__InsufficientBalance();
         }
 
         _updateGlobalState();
-        _updateAccountMP(msg.sender);
+        _updateVaultMP(msg.sender);
 
-        uint256 additionalBonusMP = _calculateBonusMP(account.stakedBalance, lockPeriod);
+        uint256 additionalBonusMP = _calculateBonusMP(vault.stakedBalance, lockPeriod);
 
-        // Update account state
-        account.lockUntil = block.timestamp + lockPeriod;
-        account.accountMP += additionalBonusMP;
-        account.maxMP += additionalBonusMP;
+        // Update vault state
+        vault.lockUntil = block.timestamp + lockPeriod;
+        vault.mp += additionalBonusMP;
+        vault.maxMP += additionalBonusMP;
 
         // Update global state
         totalMP += additionalBonusMP;
         totalMaxMP += additionalBonusMP;
 
-        account.accountRewardIndex = rewardIndex;
+        vault.rewardIndex = rewardIndex;
     }
 
     function unstake(uint256 amount)
@@ -274,51 +274,51 @@ contract RewardsStreamerMP is
         onlyRegisteredVault
         nonReentrant
     {
-        Account storage account = accounts[msg.sender];
-        if (amount > account.stakedBalance) {
+        VaultData storage vault = vaultData[msg.sender];
+        if (amount > vault.stakedBalance) {
             revert StakingManager__InsufficientBalance();
         }
 
-        if (block.timestamp < account.lockUntil) {
+        if (block.timestamp < vault.lockUntil) {
             revert StakingManager__TokensAreLocked();
         }
-        _unstake(amount, account, msg.sender);
+        _unstake(amount, vault, msg.sender);
     }
 
-    function _unstake(uint256 amount, Account storage account, address accountAddress) internal {
+    function _unstake(uint256 amount, VaultData storage vault, address vaultAddress) internal {
         _updateGlobalState();
-        _updateAccountMP(accountAddress);
+        _updateVaultMP(vaultAddress);
 
-        uint256 previousStakedBalance = account.stakedBalance;
+        uint256 previousStakedBalance = vault.stakedBalance;
 
         // solhint-disable-next-line
-        uint256 mpToReduce = Math.mulDiv(account.accountMP, amount, previousStakedBalance);
-        uint256 maxMPToReduce = Math.mulDiv(account.maxMP, amount, previousStakedBalance);
+        uint256 mpToReduce = Math.mulDiv(vault.mp, amount, previousStakedBalance);
+        uint256 maxMPToReduce = Math.mulDiv(vault.maxMP, amount, previousStakedBalance);
 
-        account.stakedBalance -= amount;
-        account.accountMP -= mpToReduce;
-        account.maxMP -= maxMPToReduce;
-        account.accountRewardIndex = rewardIndex;
+        vault.stakedBalance -= amount;
+        vault.mp -= mpToReduce;
+        vault.maxMP -= maxMPToReduce;
+        vault.rewardIndex = rewardIndex;
         totalMP -= mpToReduce;
         totalMaxMP -= maxMPToReduce;
         totalStaked -= amount;
     }
 
-    // @notice Allows an account to leave the system. This can happen when a
+    // @notice Allows a vault to leave the system. This can happen when a
     //         user doesn't agree with an upgrade of the stake manager.
     // @dev This function is protected by whitelisting the codehash of the caller.
     //      This ensures `StakeVault`s will call this function only if they don't
     //      trust the `StakeManager` (e.g. in case of an upgrade).
     function leave() external onlyTrustedCodehash nonReentrant {
-        Account storage account = accounts[msg.sender];
+        VaultData storage vault = vaultData[msg.sender];
 
-        if (account.stakedBalance > 0) {
+        if (vault.stakedBalance > 0) {
             // calling `_unstake` to update accounting accordingly
-            _unstake(account.stakedBalance, account, msg.sender);
+            _unstake(vault.stakedBalance, vault, msg.sender);
 
             // further cleanup that isn't done in `_unstake`
-            account.accountRewardIndex = 0;
-            account.lockUntil = 0;
+            vault.rewardIndex = 0;
+            vault.lockUntil = 0;
         }
     }
 
@@ -437,43 +437,43 @@ contract RewardsStreamerMP is
         return Math.mulDiv(amount, lockPeriod, YEAR);
     }
 
-    function _getAccountAccruedMP(Account storage account) internal view returns (uint256) {
-        if (account.maxMP == 0 || account.stakedBalance == 0) {
+    function _getVaultAccruedMP(VaultData storage vault) internal view returns (uint256) {
+        if (vault.maxMP == 0 || vault.stakedBalance == 0) {
             return 0;
         }
 
-        uint256 timeDiff = block.timestamp - account.lastMPUpdateTime;
+        uint256 timeDiff = block.timestamp - vault.lastMPUpdateTime;
         if (timeDiff == 0) {
             return 0;
         }
 
-        uint256 accruedMP = Math.mulDiv(timeDiff * account.stakedBalance, MP_RATE_PER_YEAR, YEAR);
+        uint256 accruedMP = Math.mulDiv(timeDiff * vault.stakedBalance, MP_RATE_PER_YEAR, YEAR);
 
-        if (account.accountMP + accruedMP > account.maxMP) {
-            accruedMP = account.maxMP - account.accountMP;
+        if (vault.mp + accruedMP > vault.maxMP) {
+            accruedMP = vault.maxMP - vault.mp;
         }
         return accruedMP;
     }
 
-    function _updateAccountMP(address accountAddress) internal {
-        Account storage account = accounts[accountAddress];
-        uint256 accruedMP = _getAccountAccruedMP(account);
+    function _updateVaultMP(address vaultAddress) internal {
+        VaultData storage vault = vaultData[vaultAddress];
+        uint256 accruedMP = _getVaultAccruedMP(vault);
 
-        account.accountMP += accruedMP;
-        account.lastMPUpdateTime = block.timestamp;
+        vault.mp += accruedMP;
+        vault.lastMPUpdateTime = block.timestamp;
     }
 
-    function updateAccountMP(address accountAddress) external onlyNotEmergencyMode {
-        _updateAccountMP(accountAddress);
+    function updateVaultMP(address vaultAddress) external onlyNotEmergencyMode {
+        _updateVaultMP(vaultAddress);
     }
 
-    function calculateAccountRewards(address accountAddress) public view returns (uint256) {
-        Account storage account = accounts[accountAddress];
+    function calculateVaultRewards(address vaultAddress) public view returns (uint256) {
+        VaultData storage vault = vaultData[vaultAddress];
 
-        uint256 accountWeight = account.stakedBalance + account.accountMP;
-        uint256 deltaRewardIndex = rewardIndex - account.accountRewardIndex;
+        uint256 vaultWeight = vault.stakedBalance + vault.mp;
+        uint256 deltaRewardIndex = rewardIndex - vault.rewardIndex;
 
-        return Math.mulDiv(accountWeight, deltaRewardIndex, SCALE_FACTOR);
+        return Math.mulDiv(vaultWeight, deltaRewardIndex, SCALE_FACTOR);
     }
 
     function enableEmergencyMode() external onlyOwner {
@@ -483,19 +483,19 @@ contract RewardsStreamerMP is
         emergencyModeEnabled = true;
     }
 
-    function getStakedBalance(address accountAddress) public view returns (uint256) {
-        return accounts[accountAddress].stakedBalance;
+    function getStakedBalance(address vaultAddress) public view returns (uint256) {
+        return vaultData[vaultAddress].stakedBalance;
     }
 
-    function getAccount(address accountAddress) external view returns (Account memory) {
-        return accounts[accountAddress];
+    function getVaultData(address vaultAddress) external view returns (VaultData memory) {
+        return vaultData[vaultAddress];
     }
 
     function totalRewardsSupply() public view returns (uint256) {
         return totalRewardsAccrued + _calculatePendingRewards();
     }
 
-    function rewardsBalanceOf(address accountAddress) external view returns (uint256) {
-        return calculateAccountRewards(accountAddress);
+    function rewardsBalanceOf(address vaultAddress) external view returns (uint256) {
+        return calculateVaultRewards(vaultAddress);
     }
 }

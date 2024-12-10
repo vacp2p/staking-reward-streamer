@@ -19,25 +19,25 @@ definition isViewFunction(method f) returns bool = (
   f.selector == sig:streamer.totalStaked().selector ||
   f.selector == sig:streamer.totalMaxMP().selector ||
   f.selector == sig:streamer.totalMP().selector ||
-  f.selector == sig:streamer.accounts(address).selector ||
+  f.selector == sig:streamer.vaultData(address).selector ||
   f.selector == sig:streamer.emergencyModeEnabled().selector ||
   f.selector == sig:streamer.getStakedBalance(address).selector ||
-  f.selector == sig:streamer.getAccount(address).selector ||
+  f.selector == sig:streamer.getVault(address).selector ||
   f.selector == sig:streamer.rewardsBalanceOf(address).selector ||
   f.selector == sig:streamer.totalRewardsSupply().selector ||
-  f.selector == sig:streamer.calculateAccountRewards(address).selector ||
+  f.selector == sig:streamer.calculateVaultRewards(address).selector ||
   f.selector == sig:streamer.lastRewardTime().selector ||
   f.selector == sig:streamer.rewardAmount().selector ||
   f.selector == sig:streamer.totalRewardsAccrued().selector ||
   f.selector == sig:streamer.rewardStartTime().selector ||
   f.selector == sig:streamer.rewardEndTime().selector ||
-  f.selector == sig:streamer.getUserTotalMP(address).selector ||
-  f.selector == sig:streamer.getUserTotalMaxMP(address).selector ||
-  f.selector == sig:streamer.getUserTotalStakedBalance(address).selector ||
+  f.selector == sig:streamer.getAccountTotalMP(address).selector ||
+  f.selector == sig:streamer.getAccountTotalMaxMP(address).selector ||
+  f.selector == sig:streamer.getAccountTotalStakedBalance(address).selector ||
   f.selector == sig:streamer.vaults(address,uint256).selector ||
   f.selector == sig:streamer.vaultOwners(address).selector ||
   f.selector == sig:streamer.registerVault().selector ||
-  f.selector == sig:streamer.getUserVaults(address).selector
+  f.selector == sig:streamer.getAccountVaults(address).selector
 );
 
 definition isOwnableFunction(method f) returns bool = (
@@ -62,7 +62,7 @@ definition isUUPSUpgradeableFunction(method f) returns bool = (
   f.selector == sig:streamer.__TrustedCodehashAccess_init(address).selector
 );
 
-rule accountCanOnlyLeaveInEmergencyMode(method f) {
+rule vaultCanOnlyLeaveInEmergencyMode(method f) {
   env e;
   calldataarg args;
 

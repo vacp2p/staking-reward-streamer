@@ -11,7 +11,6 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { RewardsStreamerMP } from "../src/RewardsStreamerMP.sol";
 import { StakeVault } from "../src/StakeVault.sol";
 import { IStakeManagerProxy } from "../src/interfaces/IStakeManagerProxy.sol";
-import { StakeManagerProxy } from "../src/StakeManagerProxy.sol";
 import { MockToken } from "./mocks/MockToken.sol";
 import { StackOverflowStakeManager } from "./mocks/StackOverflowStakeManager.sol";
 
@@ -68,39 +67,39 @@ contract RewardsStreamerMPTest is Test {
         // assertEq(streamer.rewardIndex(), p.rewardIndex, "wrong reward index");
     }
 
-    struct CheckAccountParams {
+    struct CheckVaultParams {
         address account;
         uint256 rewardBalance;
         uint256 stakedBalance;
         uint256 vaultBalance;
         uint256 rewardIndex;
-        uint256 accountMP;
+        uint256 mp;
         uint256 maxMP;
     }
 
-    function checkAccount(CheckAccountParams memory p) public view {
+    function checkVault(CheckVaultParams memory p) public view {
         // assertEq(rewardToken.balanceOf(p.account), p.rewardBalance, "wrong account reward balance");
 
-        RewardsStreamerMP.Account memory accountInfo = streamer.getAccount(p.account);
+        RewardsStreamerMP.VaultData memory vault = streamer.getVaultData(p.account);
 
-        assertEq(accountInfo.stakedBalance, p.stakedBalance, "wrong account staked balance");
+        assertEq(vault.stakedBalance, p.stakedBalance, "wrong account staked balance");
         assertEq(stakingToken.balanceOf(p.account), p.vaultBalance, "wrong vault balance");
-        // assertEq(accountInfo.accountRewardIndex, p.rewardIndex, "wrong account reward index");
-        assertEq(accountInfo.accountMP, p.accountMP, "wrong account MP");
-        assertEq(accountInfo.maxMP, p.maxMP, "wrong account max MP");
+        // assertEq(vault.rewardIndex, p.rewardIndex, "wrong account reward index");
+        assertEq(vault.mp, p.mp, "wrong account MP");
+        assertEq(vault.maxMP, p.maxMP, "wrong account max MP");
     }
 
-    struct CheckUserTotalsParams {
+    struct CheckAccountTotalsParams {
         address user;
         uint256 totalStakedBalance;
         uint256 totalMP;
         uint256 totalMaxMP;
     }
 
-    function checkUserTotals(CheckUserTotalsParams memory p) public view {
-        assertEq(streamer.getUserTotalStakedBalance(p.user), p.totalStakedBalance, "wrong user total stake balance");
-        assertEq(streamer.getUserTotalMP(p.user), p.totalMP, "wrong user total MP");
-        assertEq(streamer.getUserTotalMaxMP(p.user), p.totalMaxMP, "wrong user total MP");
+    function checkAccountTotals(CheckAccountTotalsParams memory p) public view {
+        assertEq(streamer.getAccountTotalStakedBalance(p.user), p.totalStakedBalance, "wrong user total stake balance");
+        assertEq(streamer.getAccountTotalMP(p.user), p.totalMP, "wrong user total MP");
+        assertEq(streamer.getAccountTotalMaxMP(p.user), p.totalMaxMP, "wrong user total MP");
     }
 
     function _createTestVault(address owner) internal returns (StakeVault vault) {
@@ -239,9 +238,9 @@ contract VaultRegistrationTest is RewardsStreamerMPTest {
     function test_VaultRegistration() public view {
         address[4] memory accounts = [alice, bob, charlie, dave];
         for (uint256 i = 0; i < accounts.length; i++) {
-            address[] memory userVaults = streamer.getUserVaults(accounts[i]);
-            assertEq(userVaults.length, 1, "wrong number of vaults");
-            assertEq(userVaults[0], vaults[accounts[i]], "wrong vault address");
+            address[] memory accountVaults = streamer.getAccountVaults(accounts[i]);
+            assertEq(accountVaults.length, 1, "wrong number of vaults");
+            assertEq(accountVaults[0], vaults[accounts[i]], "wrong vault address");
         }
     }
 }
@@ -281,14 +280,14 @@ contract IntegrationTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
@@ -307,26 +306,26 @@ contract IntegrationTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -346,26 +345,26 @@ contract IntegrationTest is RewardsStreamerMPTest {
              })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -402,26 +401,26 @@ contract IntegrationTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 250e18,
                 stakedBalance: 0e18,
                 vaultBalance: 0e18,
                 rewardIndex: 10e18,
-                accountMP: 0e18,
+                mp: 0e18,
                 maxMP: 0e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -440,38 +439,38 @@ contract IntegrationTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 250e18,
                 stakedBalance: 0e18,
                 vaultBalance: 0e18,
                 rewardIndex: 10e18,
-                accountMP: 0e18,
+                mp: 0e18,
                 maxMP: 0e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[charlie],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 10e18,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -491,38 +490,38 @@ contract IntegrationTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 250e18,
                 stakedBalance: 0e18,
                 vaultBalance: 0e18,
                 rewardIndex: 10e18,
-                accountMP: 0e18,
+                mp: 0e18,
                 maxMP: 0e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[charlie],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 10e18,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -542,20 +541,20 @@ contract IntegrationTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 250e18,
                 stakedBalance: 0e18,
                 vaultBalance: 0e18,
                 rewardIndex: 10e18,
-                accountMP: 0,
+                mp: 0,
                 maxMP: 0
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 // bob had 30 staked + 30 initial MP + 15 MP accrued in 6 months
                 // so in the second bucket we have 1000 rewards with
@@ -568,19 +567,19 @@ contract IntegrationTest is RewardsStreamerMPTest {
                 stakedBalance: 0e18,
                 vaultBalance: 0e18,
                 rewardIndex: 17_407_407_407_407_407_407,
-                accountMP: 0,
+                mp: 0,
                 maxMP: 0
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[charlie],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 10e18,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -606,14 +605,14 @@ contract StakeTest is RewardsStreamerMPTest {
                 rewardIndex: 0
             })
         );
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
@@ -633,14 +632,14 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
@@ -741,7 +740,7 @@ contract StakeTest is RewardsStreamerMPTest {
         vm.warp(currentTime + (365 days));
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         uint256 expectedMPIncrease = stakeAmount; // 1 year passed, 1 MP accrued per token staked
         totalMP = totalMP + expectedMPIncrease;
@@ -757,14 +756,14 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                accountMP: totalMP, // accountMP == totalMP because only one account is staking
+                mp: totalMP, // mp == totalMP because only one account is staking
                 maxMP: totalMaxMP
             })
         );
@@ -773,7 +772,7 @@ contract StakeTest is RewardsStreamerMPTest {
         vm.warp(currentTime + (365 days / 2));
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         expectedMPIncrease = stakeAmount / 2; // 1/2 year passed, 1/2 MP accrued per token staked
         totalMP = totalMP + expectedMPIncrease;
@@ -789,14 +788,14 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                accountMP: totalMP, // accountMP == totalMP because only one account is staking
+                mp: totalMP, // mp == totalMP because only one account is staking
                 maxMP: totalMaxMP
             })
         );
@@ -820,14 +819,14 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                accountMP: totalMP, // accountMP == totalMP because only one account is staking
+                mp: totalMP, // mp == totalMP because only one account is staking
                 maxMP: totalMaxMP // maxMP == totalMaxMP because only one account is staking
              })
         );
@@ -837,7 +836,7 @@ contract StakeTest is RewardsStreamerMPTest {
         vm.warp(currentTime + timeToMaxMP);
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         checkStreamer(
             CheckStreamerParams({
@@ -850,14 +849,14 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                accountMP: totalMaxMP,
+                mp: totalMaxMP,
                 maxMP: totalMaxMP
             })
         );
@@ -868,7 +867,7 @@ contract StakeTest is RewardsStreamerMPTest {
         vm.warp(currentTime + 14 days);
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         checkStreamer(
             CheckStreamerParams({
@@ -900,26 +899,26 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -943,26 +942,26 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 10e18,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 30e18,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -1069,25 +1068,25 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: aliceStakeAmount,
                 vaultBalance: aliceStakeAmount,
                 rewardIndex: 0,
-                accountMP: aliceMP,
+                mp: aliceMP,
                 maxMP: aliceMaxMP
             })
         );
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: bobStakeAmount,
                 vaultBalance: bobStakeAmount,
                 rewardIndex: 0,
-                accountMP: bobMP,
+                mp: bobMP,
                 maxMP: bobMaxMP
             })
         );
@@ -1096,8 +1095,8 @@ contract StakeTest is RewardsStreamerMPTest {
         vm.warp(currentTime + (365 days));
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
-        streamer.updateAccountMP(vaults[bob]);
+        streamer.updateVaultMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[bob]);
 
         uint256 aliceExpectedMPIncrease = aliceStakeAmount; // 1 year passed, 1 MP accrued per token staked
         uint256 bobExpectedMPIncrease = bobStakeAmount; // 1 year passed, 1 MP accrued per token staked
@@ -1118,25 +1117,25 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: aliceStakeAmount,
                 vaultBalance: aliceStakeAmount,
                 rewardIndex: 0,
-                accountMP: aliceMP,
+                mp: aliceMP,
                 maxMP: aliceMaxMP
             })
         );
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: bobStakeAmount,
                 vaultBalance: bobStakeAmount,
                 rewardIndex: 0,
-                accountMP: bobMP,
+                mp: bobMP,
                 maxMP: bobMaxMP
             })
         );
@@ -1145,8 +1144,8 @@ contract StakeTest is RewardsStreamerMPTest {
         vm.warp(currentTime + (365 days / 2));
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
-        streamer.updateAccountMP(vaults[bob]);
+        streamer.updateVaultMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[bob]);
 
         aliceExpectedMPIncrease = aliceStakeAmount / 2;
         bobExpectedMPIncrease = bobStakeAmount / 2;
@@ -1167,25 +1166,25 @@ contract StakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: aliceStakeAmount,
                 vaultBalance: aliceStakeAmount,
                 rewardIndex: 0,
-                accountMP: aliceMP,
+                mp: aliceMP,
                 maxMP: aliceMaxMP
             })
         );
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: bobStakeAmount,
                 vaultBalance: bobStakeAmount,
                 rewardIndex: 0,
-                accountMP: bobMP,
+                mp: bobMP,
                 maxMP: bobMaxMP
             })
         );
@@ -1213,14 +1212,14 @@ contract UnstakeTest is StakeTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 2e18,
                 vaultBalance: 2e18,
                 rewardIndex: 0,
-                accountMP: 2e18,
+                mp: 2e18,
                 maxMP: 10e18
             })
         );
@@ -1247,7 +1246,7 @@ contract UnstakeTest is StakeTest {
         vm.warp(currentTime + (365 days));
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         checkStreamer(
             CheckStreamerParams({
@@ -1290,7 +1289,7 @@ contract UnstakeTest is StakeTest {
         vm.warp(currentTime + (warpLength));
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         checkStreamer(
             CheckStreamerParams({
@@ -1337,14 +1336,14 @@ contract UnstakeTest is StakeTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 1000e18,
                 stakedBalance: 2e18,
                 vaultBalance: 2e18,
                 rewardIndex: 50e18, // alice reward index has been updated
-                accountMP: 2e18,
+                mp: 2e18,
                 maxMP: 10e18
             })
         );
@@ -1408,10 +1407,10 @@ contract UnstakeTest is StakeTest {
         {
             _stake(alice, amountStaked, secondsLocked);
             {
-                RewardsStreamerMP.Account memory accountInfo = streamer.getAccount(vaults[alice]);
-                assertEq(accountInfo.stakedBalance, totalStaked[stage], "stage 1: wrong account staked balance");
-                assertEq(accountInfo.accountMP, predictedTotalMP[stage], "stage 1: wrong account MP");
-                assertEq(accountInfo.maxMP, predictedTotalMaxMP[stage], "stage 1: wrong account max MP");
+                RewardsStreamerMP.VaultData memory vault = streamer.getVaultData(vaults[alice]);
+                assertEq(vault.stakedBalance, totalStaked[stage], "stage 1: wrong account staked balance");
+                assertEq(vault.mp, predictedTotalMP[stage], "stage 1: wrong account MP");
+                assertEq(vault.maxMP, predictedTotalMaxMP[stage], "stage 1: wrong account max MP");
 
                 assertEq(streamer.totalStaked(), totalStaked[stage], "stage 1: wrong total staked");
                 assertEq(streamer.totalMP(), predictedTotalMP[stage], "stage 1: wrong total MP");
@@ -1422,12 +1421,12 @@ contract UnstakeTest is StakeTest {
         stage++; // second stage: progress in time
         vm.warp(timestamp[stage]);
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
         {
-            RewardsStreamerMP.Account memory accountInfo = streamer.getAccount(vaults[alice]);
-            assertEq(accountInfo.stakedBalance, totalStaked[stage], "stage 2: wrong account staked balance");
-            assertEq(accountInfo.accountMP, predictedTotalMP[stage], "stage 2: wrong account MP");
-            assertEq(accountInfo.maxMP, predictedTotalMaxMP[stage], "stage 2: wrong account max MP");
+            RewardsStreamerMP.VaultData memory vault = streamer.getVaultData(vaults[alice]);
+            assertEq(vault.stakedBalance, totalStaked[stage], "stage 2: wrong account staked balance");
+            assertEq(vault.mp, predictedTotalMP[stage], "stage 2: wrong account MP");
+            assertEq(vault.maxMP, predictedTotalMaxMP[stage], "stage 2: wrong account max MP");
 
             assertEq(streamer.totalStaked(), totalStaked[stage], "stage 2: wrong total staked");
             assertEq(streamer.totalMP(), predictedTotalMP[stage], "stage 2: wrong total MP");
@@ -1437,10 +1436,10 @@ contract UnstakeTest is StakeTest {
         stage++; // third stage: reduced stake
         _unstake(alice, reducedStake);
         {
-            RewardsStreamerMP.Account memory accountInfo = streamer.getAccount(vaults[alice]);
-            assertEq(accountInfo.stakedBalance, totalStaked[stage], "stage 3: wrong account staked balance");
-            assertEq(accountInfo.accountMP, predictedTotalMP[stage], "stage 3: wrong account MP");
-            assertEq(accountInfo.maxMP, predictedTotalMaxMP[stage], "stage 3: wrong account max MP");
+            RewardsStreamerMP.VaultData memory vault = streamer.getVaultData(vaults[alice]);
+            assertEq(vault.stakedBalance, totalStaked[stage], "stage 3: wrong account staked balance");
+            assertEq(vault.mp, predictedTotalMP[stage], "stage 3: wrong account MP");
+            assertEq(vault.maxMP, predictedTotalMaxMP[stage], "stage 3: wrong account max MP");
 
             assertEq(streamer.totalStaked(), totalStaked[stage], "stage 3: wrong total staked");
             assertEq(streamer.totalMP(), predictedTotalMP[stage], "stage 3: wrong total MP");
@@ -1465,26 +1464,26 @@ contract UnstakeTest is StakeTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 0,
                 vaultBalance: 0,
                 rewardIndex: 0,
-                accountMP: 0,
+                mp: 0,
                 maxMP: 0
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 20e18,
                 vaultBalance: 20e18,
                 rewardIndex: 0,
-                accountMP: 20e18,
+                mp: 20e18,
                 maxMP: 100e18
             })
         );
@@ -1507,14 +1506,14 @@ contract UnstakeTest is StakeTest {
              })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 250e18,
                 stakedBalance: 0,
                 vaultBalance: 0,
                 rewardIndex: 125e17,
-                accountMP: 0,
+                mp: 0,
                 maxMP: 0
             })
         );
@@ -1532,14 +1531,14 @@ contract UnstakeTest is StakeTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 750e18,
                 stakedBalance: 20e18,
                 vaultBalance: 20e18,
                 rewardIndex: 125e17,
-                accountMP: 20e18,
+                mp: 20e18,
                 maxMP: 100e18
             })
         );
@@ -1557,14 +1556,14 @@ contract UnstakeTest is StakeTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 750e18,
                 stakedBalance: 0,
                 vaultBalance: 0,
                 rewardIndex: 125e17,
-                accountMP: 0,
+                mp: 0,
                 maxMP: 0
             })
         );
@@ -1591,14 +1590,14 @@ contract LockTest is RewardsStreamerMPTest {
         uint256 initialMaxMP = stakeAmount * streamer.MAX_MULTIPLIER() + stakeAmount; // 50e18
 
         // Verify initial state
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                accountMP: initialAccountMP,
+                mp: initialAccountMP,
                 maxMP: initialMaxMP
             })
         );
@@ -1610,14 +1609,14 @@ contract LockTest is RewardsStreamerMPTest {
         _lock(alice, lockPeriod);
 
         // Check updated state
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                accountMP: initialAccountMP + expectedBonusMP,
+                mp: initialAccountMP + expectedBonusMP,
                 maxMP: initialMaxMP + expectedBonusMP
             })
         );
@@ -1685,14 +1684,14 @@ contract EmergencyExitTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 0,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
@@ -1783,26 +1782,26 @@ contract EmergencyExitTest is RewardsStreamerMPTest {
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 0,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[bob],
                 rewardBalance: 0,
                 stakedBalance: 30e18,
                 vaultBalance: 0,
                 rewardIndex: 0,
-                accountMP: 30e18,
+                mp: 30e18,
                 maxMP: 150e18
             })
         );
@@ -1828,14 +1827,14 @@ contract EmergencyExitTest is RewardsStreamerMPTest {
         StakeVault aliceVault = StakeVault(vaults[alice]);
         aliceVault.emergencyExit(alternateAddress);
 
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 10e18,
                 vaultBalance: 0,
                 rewardIndex: 0,
-                accountMP: 10e18,
+                mp: 10e18,
                 maxMP: 50e18
             })
         );
@@ -1940,14 +1939,14 @@ contract LeaveTest is RewardsStreamerMPTest {
         );
 
         // vault should be empty as funds have been moved out
-        checkAccount(
-            CheckAccountParams({
+        checkVault(
+            CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
                 stakedBalance: 0,
                 vaultBalance: 0,
                 rewardIndex: 0,
-                accountMP: 0,
+                mp: 0,
                 maxMP: 0
             })
         );
@@ -2123,7 +2122,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         // FIXME: this is needed to update the global state and account MP
         // Later we should update the functions to use "real-time" values.
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         uint256 tolerance = 300; // 300 wei
 
@@ -2133,7 +2132,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         vm.warp(initialTime + 10 days);
 
         streamer.updateGlobalState();
-        streamer.updateAccountMP(vaults[alice]);
+        streamer.updateVaultMP(vaults[alice]);
 
         assertEq(streamer.totalRewardsSupply(), 1000e18, "Total rewards supply mismatch");
         assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 1000e18, tolerance);
@@ -2185,8 +2184,8 @@ contract MultipleVaultsStakeTest is RewardsStreamerMPTest {
             })
         );
 
-        checkUserTotals(
-            CheckUserTotalsParams({ user: alice, totalStakedBalance: 90e18, totalMP: 90e18, totalMaxMP: 450e18 })
+        checkAccountTotals(
+            CheckAccountTotalsParams({ user: alice, totalStakedBalance: 90e18, totalMP: 90e18, totalMaxMP: 450e18 })
         );
     }
 }

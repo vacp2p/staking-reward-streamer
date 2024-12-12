@@ -332,15 +332,28 @@ contract RewardsStreamerMP is
     }
 
     function updateGlobalMP() internal {
-        if (totalMaxMP == 0) {
+        (uint256 adjustedRewardIndex, uint256 newTotalMPAccrued) = _pendingTotalMPAccrued();
+        if (newTotalMPAccrued > totalMPAccrued) {
+            totalMPAccrued = newTotalMPAccrued;
             lastMPUpdatedTime = block.timestamp;
-            return;
+        }
+
+        if (adjustedRewardIndex != rewardIndex) {
+            rewardIndex = adjustedRewardIndex;
+        }
+    }
+
+    function _pendingTotalMPAccrued() internal view returns (uint256, uint256) {
+        uint256 adjustedRewardIndex = rewardIndex;
+
+        if (totalMaxMP == 0) {
+            return (adjustedRewardIndex, totalMPAccrued);
         }
 
         uint256 currentTime = block.timestamp;
         uint256 timeDiff = currentTime - lastMPUpdatedTime;
         if (timeDiff == 0) {
-            return;
+            return (adjustedRewardIndex, totalMPAccrued);
         }
 
         uint256 accruedMP = (timeDiff * totalStaked * MP_RATE_PER_YEAR) / YEAR;
@@ -348,17 +361,16 @@ contract RewardsStreamerMP is
             accruedMP = totalMaxMP - totalMPAccrued;
         }
 
+        uint256 newTotalMPAccrued = totalMPAccrued + accruedMP;
+
         // Adjust rewardIndex before updating totalMP
         uint256 previousTotalWeight = totalStaked + totalMPAccrued;
-        totalMPAccrued += accruedMP;
-
-        uint256 newTotalWeight = totalStaked + totalMPAccrued;
-
+        uint256 newTotalWeight = totalStaked + newTotalMPAccrued;
         if (previousTotalWeight != 0 && newTotalWeight != previousTotalWeight) {
-            rewardIndex = (rewardIndex * previousTotalWeight) / newTotalWeight;
+            adjustedRewardIndex = (rewardIndex * previousTotalWeight) / newTotalWeight;
         }
 
-        lastMPUpdatedTime = currentTime;
+        return (adjustedRewardIndex, newTotalMPAccrued);
     }
 
     function setReward(uint256 amount, uint256 duration) external onlyOwner {
@@ -402,7 +414,7 @@ contract RewardsStreamerMP is
             return 0;
         }
 
-        uint256 accruedRewards = (timeElapsed * rewardAmount) / duration;
+        uint256 accruedRewards = Math.mulDiv(timeElapsed, rewardAmount, duration);
         return accruedRewards;
     }
 
@@ -419,8 +431,16 @@ contract RewardsStreamerMP is
         }
     }
 
+    function pendingRewardIndex() external view returns (uint256) {
+        uint256 newRewardIndex;
+        (, newRewardIndex) = _pendingRewardIndex();
+        return newRewardIndex;
+    }
+
     function _pendingRewardIndex() internal view returns (uint256, uint256) {
-        uint256 totalWeight = totalStaked + totalMPAccrued;
+        (uint256 adjustedRewardIndex, uint256 newTotalMPAccrued) = _pendingTotalMPAccrued();
+        uint256 totalWeight = totalStaked + newTotalMPAccrued;
+
         if (totalWeight == 0) {
             return (0, rewardIndex);
         }
@@ -438,7 +458,7 @@ contract RewardsStreamerMP is
             return (0, rewardIndex);
         }
 
-        uint256 newRewardIndex = rewardIndex + Math.mulDiv(accruedRewards, SCALE_FACTOR, totalWeight);
+        uint256 newRewardIndex = adjustedRewardIndex + Math.mulDiv(accruedRewards, SCALE_FACTOR, totalWeight);
 
         return (accruedRewards, newRewardIndex);
     }
@@ -475,15 +495,6 @@ contract RewardsStreamerMP is
 
     function updateAccountMP(address accountAddress) external onlyNotEmergencyMode {
         _updateAccountMP(accountAddress);
-    }
-
-    function calculateAccountRewards(address accountAddress) public view returns (uint256) {
-        Account storage account = accounts[accountAddress];
-
-        uint256 accountWeight = account.stakedBalance + account.mpAccrued;
-        uint256 deltaRewardIndex = rewardIndex - account.accountRewardIndex;
-
-        return Math.mulDiv(accountWeight, deltaRewardIndex, SCALE_FACTOR);
     }
 
     function enableEmergencyMode() external onlyOwner {

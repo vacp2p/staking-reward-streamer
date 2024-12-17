@@ -18,7 +18,7 @@ definition isViewFunction(method f) returns bool = (
   f.selector == sig:streamer.owner().selector ||
   f.selector == sig:streamer.totalStaked().selector ||
   f.selector == sig:streamer.totalMaxMP().selector ||
-  f.selector == sig:streamer.totalMP().selector ||
+  f.selector == sig:streamer.totalMPAccrued().selector ||
   f.selector == sig:streamer.accounts(address).selector ||
   f.selector == sig:streamer.emergencyModeEnabled().selector ||
   f.selector == sig:streamer.getStakedBalance(address).selector ||

@@ -25,6 +25,7 @@ definition isViewFunction(method f) returns bool = (
   f.selector == sig:streamer.getAccount(address).selector ||
   f.selector == sig:streamer.rewardsBalanceOf(address).selector ||
   f.selector == sig:streamer.rewardsBalanceOfUser(address).selector ||
+  f.selector == sig:streamer.pendingRewardIndex(address).selector ||
   f.selector == sig:streamer.totalRewardsSupply().selector ||
   f.selector == sig:streamer.lastRewardTime().selector ||
   f.selector == sig:streamer.rewardAmount().selector ||

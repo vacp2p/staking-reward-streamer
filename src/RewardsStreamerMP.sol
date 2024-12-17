@@ -516,7 +516,7 @@ contract RewardsStreamerMP is
         return totalRewardsAccrued + _calculatePendingRewards();
     }
 
-    function rewardsBalanceOf(address accountAddress) external view returns (uint256) {
+    function rewardsBalanceOf(address accountAddress) public view returns (uint256) {
         uint256 newRewardIndex;
         (, newRewardIndex) = _pendingRewardIndex();
 
@@ -526,6 +526,17 @@ contract RewardsStreamerMP is
         uint256 deltaRewardIndex = newRewardIndex - account.accountRewardIndex;
 
         return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
+    }
+
+    function rewardsBalanceOfUser(address user) external view returns (uint256) {
+        address[] memory userVaults = vaults[user];
+        uint256 userTotalRewards = 0;
+
+        for (uint256 i = 0; i < userVaults.length; i++) {
+            userTotalRewards += rewardsBalanceOf(userVaults[i]);
+        }
+
+        return userTotalRewards;
     }
 
     function _mpBalanceOf(address accountAddress) internal view returns (uint256) {

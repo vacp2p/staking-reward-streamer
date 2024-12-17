@@ -24,8 +24,8 @@ definition isViewFunction(method f) returns bool = (
   f.selector == sig:streamer.getStakedBalance(address).selector ||
   f.selector == sig:streamer.getAccount(address).selector ||
   f.selector == sig:streamer.rewardsBalanceOf(address).selector ||
+  f.selector == sig:streamer.rewardsBalanceOfUser(address).selector ||
   f.selector == sig:streamer.totalRewardsSupply().selector ||
-  f.selector == sig:streamer.calculateAccountRewards(address).selector ||
   f.selector == sig:streamer.lastRewardTime().selector ||
   f.selector == sig:streamer.rewardAmount().selector ||
   f.selector == sig:streamer.totalRewardsAccrued().selector ||

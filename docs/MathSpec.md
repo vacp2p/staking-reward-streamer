@@ -965,9 +965,9 @@ $$
 
 #### Maximum Accrued Multiplier Points
 
-The maximum multiplier points that can be accrued over time for a determined amount of balance. 
-It's $\mathcal{f}{mp_\mathcal{A}}(a_{bal}, Delta t) \longrightarrow$ Accrue Multiplier Points 
-using $\Delta t = M_{MAX} \times T_{YEAR}$
+The maximum multiplier points that can be accrued over time for a determined amount of balance. It's
+$\mathcal{f}{mp_\mathcal{A}}(a_{bal}, Delta t) \longrightarrow$ Accrue Multiplier Points using
+$\Delta t = M_{MAX} \times T_{YEAR}$
 
 $$
 \boxed{

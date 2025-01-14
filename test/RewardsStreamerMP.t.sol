@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, console } from "forge-std/Test.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { DeployRewardsStreamerMPScript } from "../script/DeployRewardsStreamerMP.s.sol";
 import { UpgradeRewardsStreamerMPScript } from "../script/UpgradeRewardsStreamerMP.s.sol";
@@ -2132,6 +2132,64 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(streamer.totalRewardsSupply(), 1000e18, "Total rewards supply mismatch");
         assertEq(streamer.rewardsBalanceOf(vaults[alice]), secondLiveBalanceBeforeGlobalUpdate);
         assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 1000e18, tolerance);
+    }
+
+    function testRewardsBalanceOfStakingAgain() public {
+        assertEq(streamer.totalRewardsSupply(), 0);
+
+        uint256 initialTime = vm.getBlockTimestamp();
+
+        _stake(alice, 100e18, 0);
+        _stake(bob, 100e18, 0);
+        assertEq(streamer.rewardsBalanceOf(vaults[alice]), 0);
+
+        vm.prank(admin);
+        streamer.setReward(2000e18, 10 days);
+        assertEq(streamer.rewardsBalanceOf(vaults[alice]), 0);
+        assertEq(streamer.rewardsBalanceOf(vaults[bob]), 0);
+
+        vm.warp(initialTime + 5 days);
+
+        uint256 tolerance = 300; // 300 wei
+        assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 500e18, tolerance);
+        assertApproxEqAbs(streamer.accountAccruedRewards(vaults[alice]), 0, tolerance);
+        assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[bob]), 500e18, tolerance);
+        assertApproxEqAbs(streamer.accountAccruedRewards(vaults[bob]), 0, tolerance);
+
+        _stake(alice, 100e18, 0);
+        // console.log("global index", streamer.currentRewardIndex());
+        // console.log("alice index", streamer.accountRewardIndex(vaults[alice]));
+
+        assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 500e18, tolerance);
+        assertApproxEqAbs(streamer.accountAccruedRewards(vaults[alice]), 500e18, tolerance);
+        assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[bob]), 500e18, tolerance);
+        assertApproxEqAbs(streamer.accountAccruedRewards(vaults[bob]), 0, tolerance);
+
+        vm.warp(initialTime + 10 days);
+
+        console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
+
+        vm.warp(initialTime + 100 days);
+        console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
+
+        vm.warp(initialTime + 200 days);
+        console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
+
+        vm.warp(initialTime + 10_000 days);
+        console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
+
+        // assertApproxEqAbs(
+        //     streamer.rewardsBalanceOf(vaults[alice]) + streamer.rewardsBalanceOf(vaults[bob]), 2000e18, tolerance
+        // );
+
+        // console.log("rewards total supply", streamer.totalRewardsSupply());
+        // console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
+        // console.log("alice rewards accrued", streamer.accountAccruedRewards(vaults[alice]));
+        // console.log("bob rewards balance", streamer.rewardsBalanceOf(vaults[bob]));
+        // console.log("bob rewards accrued", streamer.accountAccruedRewards(vaults[bob]));
+
+        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 1_166_666_666_666_666_666_666, tolerance);
+        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 833_333_333_333_333_333_333, tolerance);
     }
 }
 

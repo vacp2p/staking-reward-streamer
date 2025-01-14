@@ -60,6 +60,7 @@ contract RewardsStreamerMP is
         uint256 stakedBalance;
         uint256 accountRewardIndex;
         uint256 mpAccrued;
+        uint256 rewardAccrued;
         uint256 maxMP;
         uint256 lastMPUpdateTime;
         uint256 lockUntil;
@@ -201,6 +202,8 @@ contract RewardsStreamerMP is
         _updateAccountMP(msg.sender, true);
 
         Account storage account = accounts[msg.sender];
+        _updateAccountReward(msg.sender);
+
         if (account.lockUntil != 0 && account.lockUntil > block.timestamp) {
             revert StakingManager__CannotRestakeWithLockedFunds();
         }
@@ -229,6 +232,43 @@ contract RewardsStreamerMP is
         totalMaxMP += accountMaxMP;
 
         account.accountRewardIndex = rewardIndex;
+    }
+
+    function currentRewardIndex() external view returns (uint256) {
+        (, uint256 newRewardIndex) = _pendingRewardIndex();
+        return newRewardIndex;
+    }
+
+    function accountAccruedRewards(address accountAddress) external view returns (uint256) {
+        return accounts[accountAddress].rewardAccrued;
+    }
+
+    function accountRewardIndex(address accountAddress) external view returns (uint256) {
+        return accounts[accountAddress].accountRewardIndex;
+    }
+
+    function _updateAccountReward(address accountAddress) internal {
+        Account storage account = accounts[accountAddress];
+        (, uint256 currentRewardIndex) = _pendingRewardIndex();
+
+        uint256 accountWeight = account.stakedBalance + _mpBalanceOf(accountAddress);
+        if (accountWeight == 0) {
+            account.accountRewardIndex = currentRewardIndex;
+            return;
+        }
+
+        if (currentRewardIndex == account.accountRewardIndex) {
+            return;
+        }
+
+        uint256 deltaIndex = currentRewardIndex - account.accountRewardIndex;
+        uint256 pending = (accountWeight * deltaIndex) / SCALE_FACTOR;
+
+        if (pending > 0) {
+            account.rewardAccrued += pending;
+        }
+
+        account.accountRewardIndex = currentRewardIndex;
     }
 
     function lock(uint256 lockPeriod)
@@ -299,6 +339,7 @@ contract RewardsStreamerMP is
 
         account.stakedBalance -= amount;
         account.mpAccrued -= mpToReduce;
+        // FIXME: update account.rewardAccrued
         account.maxMP -= maxMPToReduce;
         account.accountRewardIndex = rewardIndex;
         totalMPAccrued -= mpToReduce;
@@ -528,7 +569,7 @@ contract RewardsStreamerMP is
         uint256 accountWeight = account.stakedBalance + _mpBalanceOf(accountAddress);
         uint256 deltaRewardIndex = newRewardIndex - account.accountRewardIndex;
 
-        return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
+        return account.rewardAccrued + (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
     }
 
     function rewardsBalanceOfUser(address user) external view returns (uint256) {

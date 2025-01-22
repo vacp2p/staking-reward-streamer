@@ -131,7 +131,7 @@ The system updates indices in the following situations:
 - When accounts stake or unstake tokens
 
 This mechanism ensures that, historical rewards are preserved accurately and accounts receive their fair share based on
-their weight over time. ALso, new accounts don't receive rewards from before they entered the system
+their weight over time. Also, new accounts don't receive rewards from before they entered the system.
 
 ### Index Adjustment Example
 

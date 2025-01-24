@@ -6,3 +6,9 @@ function getAccountStakedBalance(address account) returns uint256 {
     return stakedBalance;
 }
 
+function getAccountMP(address account) returns uint256 {
+    uint256 accountMP;
+    _, _, accountMP, _, _, _ = streamer.accounts(account);
+    return accountMP;
+}
+

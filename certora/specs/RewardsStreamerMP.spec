@@ -9,10 +9,7 @@ methods {
     function totalStaked() external returns (uint256) envfree;
     function accounts(address) external returns (uint256, uint256, uint256, uint256, uint256, uint256) envfree;
     function lastMPUpdatedTime() external returns (uint256) envfree;
-    function updateGlobalState() external;
-    function updateAccountMP(address accountAddress) external;
     function emergencyModeEnabled() external returns (bool) envfree;
-    function leave() external;
     function Math.mulDiv(uint256 a, uint256 b, uint256 c) internal returns uint256 => mulDivSummary(a,b,c);
 }
 

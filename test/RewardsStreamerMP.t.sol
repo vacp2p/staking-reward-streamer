@@ -2256,7 +2256,7 @@ contract FuzzTests is RewardsStreamerMPTest {
         _stake(alice, stakeAmount, lockUpPeriod);
 
         uint256 currentTime = vm.getBlockTimestamp();
-        vm.warp(currentTime + lockUpPeriod);
+        vm.warp(currentTime + accruedTime);
 
         _unstake(alice, unstakeAmount);
 

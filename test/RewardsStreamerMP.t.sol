@@ -2257,16 +2257,15 @@ contract FuzzTests is RewardsStreamerMPTest {
 
         uint256 currentTime = vm.getBlockTimestamp();
         vm.warp(currentTime + lockUpPeriod);
-        streamer.updateGlobalState();
 
         _unstake(alice, unstakeAmount);
 
         checkStreamer(
             CheckStreamerParams({
-                totalStaked: stakeAmount,
+                totalStaked: stakeAmount - unstakeAmount,
                 totalMPAccrued: expectedTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount),
-                totalMaxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount),
-                stakingBalance: stakeAmount,
+                totalMaxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedMaxTotalMP, unstakeAmount),
+                stakingBalance: stakeAmount - unstakeAmount,
                 rewardBalance: 0,
                 rewardIndex: 0
             })
@@ -2276,11 +2275,11 @@ contract FuzzTests is RewardsStreamerMPTest {
             CheckVaultParams({
                 account: vaults[alice],
                 rewardBalance: 0,
-                stakedBalance: stakeAmount,
-                vaultBalance: stakeAmount,
+                stakedBalance: stakeAmount - unstakeAmount,
+                vaultBalance: stakeAmount - unstakeAmount,
                 rewardIndex: 0,
                 mpAccrued: expectedTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount),
-                maxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount)
+                maxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedMaxTotalMP, unstakeAmount)
             })
         );
     }

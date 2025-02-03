@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, console } from "forge-std/Test.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { DeployRewardsStreamerMPScript } from "../script/DeployRewardsStreamerMP.s.sol";
 import { UpgradeRewardsStreamerMPScript } from "../script/UpgradeRewardsStreamerMP.s.sol";
@@ -110,7 +110,7 @@ contract RewardsStreamerMPTest is StakeMath, Test {
         vault.register();
     }
 
-    function _stake(address account, uint256 amount, uint256 lockupTime) public {
+    function _stake(address account, uint256 amount, uint256 lockupTime) public virtual {
         StakeVault vault = StakeVault(vaults[account]);
         vm.prank(account);
         vault.stake(amount, lockupTime);
@@ -2129,6 +2129,8 @@ contract MultipleVaultsStakeTest is RewardsStreamerMPTest {
     }
 
     function test_StakeMultipleVaults() public {
+        console.log(MAX_BALANCE);
+
         // Alice vault1 stakes 10 tokens
         _stakeWithVault(alice, vault1, 10e18, 0);
 
@@ -2153,4 +2155,168 @@ contract MultipleVaultsStakeTest is RewardsStreamerMPTest {
             CheckUserTotalsParams({ user: alice, totalStakedBalance: 90e18, totalMPAccrued: 90e18, totalMaxMP: 450e18 })
         );
     }
+}
+
+contract FuzzTests is RewardsStreamerMPTest {
+
+    function _stake(address account, uint256 amount, uint256 lockPeriod) public override {
+        stakingToken.mint(account, amount);
+        vm.prank(account);
+        stakingToken.approve(vaults[account], amount);
+        super._stake(account, amount, lockPeriod);
+    }
+
+    function testFuzz_Stake(uint256 stakeAmount, uint256 lockUpPeriod) public {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
+        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
+        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+
+        _stake(alice, stakeAmount, lockUpPeriod);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: stakeAmount,
+                totalMPAccrued: stakeAmount + expectedBonusMP,
+                totalMaxMP: expectedMaxTotalMP,
+                stakingBalance: stakeAmount,
+                rewardBalance: 0,
+                rewardIndex: 0
+            })
+        );
+
+        checkVault(
+            CheckVaultParams({
+                account: vaults[alice],
+                rewardBalance: 0,
+                stakedBalance: stakeAmount,
+                vaultBalance: stakeAmount,
+                rewardIndex: 0,
+                mpAccrued: stakeAmount + expectedBonusMP,
+                maxMP: expectedMaxTotalMP
+            })
+        );
+    }
+    function testFuzz_AccrueMP(uint256 stakeAmount, uint256 lockUpPeriod, uint16 accruedTime) public {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
+        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
+        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+        uint256 expectedAccruedMP = Math.min(stakeAmount + expectedBonusMP + _accrueMP(stakeAmount, accruedTime),expectedMaxTotalMP);
+
+        _stake(alice, stakeAmount, lockUpPeriod);
+
+        uint256 currentTime = vm.getBlockTimestamp();
+        vm.warp(currentTime + accruedTime);
+        streamer.updateGlobalState();
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: stakeAmount,
+                totalMPAccrued: expectedAccruedMP,
+                totalMaxMP: expectedMaxTotalMP,
+                stakingBalance: stakeAmount,
+                rewardBalance: 0,
+                rewardIndex: 0
+            })
+        );
+
+        checkVault(
+            CheckVaultParams({
+                account: vaults[alice],
+                rewardBalance: 0,
+                stakedBalance: stakeAmount,
+                vaultBalance: stakeAmount,
+                rewardIndex: 0,
+                mpAccrued: expectedAccruedMP,
+                maxMP: expectedMaxTotalMP
+            })
+        );
+        
+        
+    }
+    
+    function testFuzz_Unstake(uint256 stakeAmount, uint256 lockUpPeriod, uint16 accruedTime, uint256 unstakeAmount) public {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
+        vm.assume(unstakeAmount <= stakeAmount);
+        vm.assume(accruedTime >= lockUpPeriod);
+
+        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
+        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+        uint256 expectedAccruedMP = Math.min(stakeAmount + expectedBonusMP + _accrueMP(stakeAmount, accruedTime),expectedMaxTotalMP);
+
+        _stake(alice, stakeAmount, lockUpPeriod);
+
+        uint256 currentTime = vm.getBlockTimestamp();
+        vm.warp(currentTime + lockUpPeriod);
+        streamer.updateGlobalState();
+
+        _unstake(alice, unstakeAmount);
+        
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: stakeAmount,
+                totalMPAccrued: expectedAccruedMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount),
+                totalMaxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount),
+                stakingBalance: stakeAmount,
+                rewardBalance: 0,
+                rewardIndex: 0
+            })
+        );
+
+        checkVault(
+            CheckVaultParams({
+                account: vaults[alice],
+                rewardBalance: 0,
+                stakedBalance: stakeAmount,
+                vaultBalance: stakeAmount,
+                rewardIndex: 0,
+                mpAccrued: expectedAccruedMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount),
+                maxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount)
+            })
+        );
+
+   
+        
+    }
+
+
+    function testFuzz_EmergencyExit(uint256 stakeAmount, uint256 lockUpPeriod) public {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
+        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
+        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+
+        _stake(alice, stakeAmount, lockUpPeriod);
+        
+        vm.prank(admin);
+        streamer.enableEmergencyMode();
+
+        _emergencyExit(alice);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: stakeAmount,
+                totalMPAccrued: stakeAmount + expectedBonusMP,
+                totalMaxMP: expectedMaxTotalMP,
+                stakingBalance: 0,
+                rewardBalance: 0,
+                rewardIndex: 0
+            })
+        );
+
+        checkVault(
+            CheckVaultParams({
+                account: vaults[alice],
+                rewardBalance: 0,
+                stakedBalance: stakeAmount,
+                vaultBalance: 0,
+                rewardIndex: 0,
+                mpAccrued: stakeAmount + expectedBonusMP,
+                maxMP: expectedMaxTotalMP
+            })
+        );
+    }
+
 }

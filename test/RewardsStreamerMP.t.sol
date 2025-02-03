@@ -2158,7 +2158,6 @@ contract MultipleVaultsStakeTest is RewardsStreamerMPTest {
 }
 
 contract FuzzTests is RewardsStreamerMPTest {
-
     function _stake(address account, uint256 amount, uint256 lockPeriod) public override {
         stakingToken.mint(account, amount);
         vm.prank(account);
@@ -2197,23 +2196,25 @@ contract FuzzTests is RewardsStreamerMPTest {
             })
         );
     }
+
     function testFuzz_AccrueMP(uint256 stakeAmount, uint256 lockUpPeriod, uint16 accruedTime) public {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
         vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
-        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
         uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
-        uint256 expectedAccruedMP = Math.min(stakeAmount + expectedBonusMP + _accrueMP(stakeAmount, accruedTime),expectedMaxTotalMP);
+        uint256 rawTotalMP =
+            _initialMP(stakeAmount) + _bonusMP(stakeAmount, lockUpPeriod) + _accrueMP(stakeAmount, accruedTime);
+        uint256 expectedTotalMP = Math.min(rawTotalMP, expectedMaxTotalMP);
 
         _stake(alice, stakeAmount, lockUpPeriod);
 
         uint256 currentTime = vm.getBlockTimestamp();
         vm.warp(currentTime + accruedTime);
         streamer.updateGlobalState();
-
+        streamer.updateVaultMP(vaults[alice]);
         checkStreamer(
             CheckStreamerParams({
                 totalStaked: stakeAmount,
-                totalMPAccrued: expectedAccruedMP,
+                totalMPAccrued: expectedTotalMP,
                 totalMaxMP: expectedMaxTotalMP,
                 stakingBalance: stakeAmount,
                 rewardBalance: 0,
@@ -2228,23 +2229,29 @@ contract FuzzTests is RewardsStreamerMPTest {
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                mpAccrued: expectedAccruedMP,
+                mpAccrued: expectedTotalMP,
                 maxMP: expectedMaxTotalMP
             })
         );
-        
-        
     }
-    
-    function testFuzz_Unstake(uint256 stakeAmount, uint256 lockUpPeriod, uint16 accruedTime, uint256 unstakeAmount) public {
+
+    function testFuzz_Unstake(
+        uint256 stakeAmount,
+        uint256 lockUpPeriod,
+        uint16 accruedTime,
+        uint256 unstakeAmount
+    )
+        public
+    {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
         vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
         vm.assume(unstakeAmount <= stakeAmount);
         vm.assume(accruedTime >= lockUpPeriod);
 
-        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
         uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
-        uint256 expectedAccruedMP = Math.min(stakeAmount + expectedBonusMP + _accrueMP(stakeAmount, accruedTime),expectedMaxTotalMP);
+        uint256 rawTotalMP =
+            _initialMP(stakeAmount) + _bonusMP(stakeAmount, lockUpPeriod) + _accrueMP(stakeAmount, accruedTime);
+        uint256 expectedTotalMP = Math.min(rawTotalMP, expectedMaxTotalMP);
 
         _stake(alice, stakeAmount, lockUpPeriod);
 
@@ -2253,12 +2260,12 @@ contract FuzzTests is RewardsStreamerMPTest {
         streamer.updateGlobalState();
 
         _unstake(alice, unstakeAmount);
-        
+
         checkStreamer(
             CheckStreamerParams({
                 totalStaked: stakeAmount,
-                totalMPAccrued: expectedAccruedMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount),
-                totalMaxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount),
+                totalMPAccrued: expectedTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount),
+                totalMaxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount),
                 stakingBalance: stakeAmount,
                 rewardBalance: 0,
                 rewardIndex: 0
@@ -2272,15 +2279,11 @@ contract FuzzTests is RewardsStreamerMPTest {
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,
                 rewardIndex: 0,
-                mpAccrued: expectedAccruedMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount),
-                maxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedAccruedMP, unstakeAmount)
+                mpAccrued: expectedTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount),
+                maxMP: expectedMaxTotalMP - _reduceMP(stakeAmount, expectedTotalMP, unstakeAmount)
             })
         );
-
-   
-        
     }
-
 
     function testFuzz_EmergencyExit(uint256 stakeAmount, uint256 lockUpPeriod) public {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
@@ -2289,7 +2292,7 @@ contract FuzzTests is RewardsStreamerMPTest {
         uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
 
         _stake(alice, stakeAmount, lockUpPeriod);
-        
+
         vm.prank(admin);
         streamer.enableEmergencyMode();
 
@@ -2318,5 +2321,4 @@ contract FuzzTests is RewardsStreamerMPTest {
             })
         );
     }
-
 }

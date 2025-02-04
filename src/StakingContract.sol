@@ -85,10 +85,20 @@ contract StakingContract {
             return;
         }
 
+        (uint256 newRewards, uint256 newRewardIndex) = currentRewardIndex();
+        if (newRewards > 0) {
+            rewardIndex = newRewardIndex;
+            accountedRewards += newRewards;
+        }
+    }
+
+    function currentRewardIndex() public view returns (uint256, uint256) {
         uint256 newRewards = rewardBalance > accountedRewards ? rewardBalance - accountedRewards : 0;
         if (newRewards > 0) {
-            rewardIndex += (newRewards * SCALE_FACTOR) / currentTotalMP();
-            accountedRewards += newRewards;
+            uint256 newRewardIndex = rewardIndex + (newRewards * SCALE_FACTOR) / currentTotalMP();
+            return (newRewards, newRewardIndex);
+        } else {
+            return (0, rewardIndex);
         }
     }
 

@@ -2220,6 +2220,12 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.addReward(1000e18);
         dump(s);
 
+        console.log("--------------");
+
+        vm.warp(initialTime + 3650 days);
+        console.log("after 10 years, no rewards");
+        dump(s);
+
         // console.log("total rewards supply", s.rewardsTotalSupply());
         // console.log("rewardIndex", s.rewardIndex());
         // console.log("alice balance", s.rewardsBalanceOf(alice));

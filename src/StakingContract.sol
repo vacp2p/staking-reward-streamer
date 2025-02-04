@@ -143,6 +143,11 @@ contract StakingContract {
         return user.mp;
     }
 
+    function accountStakedBalance(address userAddress) public view returns (uint256) {
+        UserInfo storage user = users[userAddress];
+        return user.stakedBalance;
+    }
+
     function getUserInfo(address userAddress) public view returns (UserInfo memory) {
         return users[userAddress];
     }

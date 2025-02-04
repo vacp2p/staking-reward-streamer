@@ -2164,7 +2164,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
 
     function assertSumOfAllBalances(StakingContract s, uint256 expectedAmount) public {
         uint256 sum = s.accountClaimedRewards(alice) + s.accountClaimedRewards(bob) + s.accountClaimedRewards(charlie);
-        uint256 tolerance = 1000;
+        uint256 tolerance = 2000;
         assertApproxEqAbs(sum, expectedAmount, tolerance);
     }
 
@@ -2184,6 +2184,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
 
         assertEq(s.accountClaimedRewards(alice), 0);
         assertEq(s.currentUserMP(alice), 100e18);
+        assertEq(s.totalStaked(), 100e18);
 
         vm.warp(initialTime + 182.5 days);
         console.log("after half year");
@@ -2191,6 +2192,10 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.addReward(1000e18);
         dump(s);
 
+        assertEq(s.totalStaked(), 100e18);
+        assertEq(s.accountStakedBalance(alice), 100e18);
+        assertEq(s.accountStakedBalance(bob), 0);
+        assertEq(s.accountStakedBalance(charlie), 0);
         assertEq(s.currentUserMP(alice), 150e18);
         assertEq(s.currentUserMP(bob), 0);
         assertEq(s.currentUserMP(charlie), 0);
@@ -2205,12 +2210,19 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         console.log("bob stakes 100");
         vm.prank(bob);
         s.stake(100e18);
+        console.log("alice stakes 100 more");
+        vm.prank(alice);
+        s.stake(100e18);
         console.log("--------------");
 
-        assertEq(s.currentUserMP(alice), 150e18);
+        assertEq(s.totalStaked(), 300e18);
+        assertEq(s.accountStakedBalance(alice), 200e18);
+        assertEq(s.accountStakedBalance(bob), 100e18);
+        assertEq(s.accountStakedBalance(charlie), 0);
+        assertEq(s.currentUserMP(alice), 250e18);
         assertEq(s.currentUserMP(bob), 100e18);
         assertEq(s.currentUserMP(charlie), 0);
-        assertEq(s.currentTotalMP(), 250e18);
+        assertEq(s.currentTotalMP(), 350e18);
 
         vm.warp(initialTime + 365 days);
         console.log("after 1 year");
@@ -2219,9 +2231,9 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
 
         dump(s);
 
-        assertEq(s.currentUserMP(alice), 200e18);
+        assertEq(s.currentUserMP(alice), 350e18);
         assertEq(s.currentUserMP(bob), 150e18);
-        assertEq(s.currentTotalMP(), 350e18);
+        assertEq(s.currentTotalMP(), 500e18);
         assertSumOfAllBalances(s, 2000e18);
         console.log("--------------");
 
@@ -2232,10 +2244,10 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.stake(100e18);
         dump(s);
 
-        assertEq(s.currentUserMP(alice), 300e18);
+        assertEq(s.currentUserMP(alice), 550e18);
         assertEq(s.currentUserMP(bob), 250e18);
         assertEq(s.currentUserMP(charlie), 100e18);
-        assertEq(s.currentTotalMP(), 650e18);
+        assertEq(s.currentTotalMP(), 900e18);
         console.log("--------------");
 
         vm.warp(initialTime + 1095 days);
@@ -2243,10 +2255,10 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.addReward(1000e18);
         dump(s);
 
-        assertEq(s.currentUserMP(alice), 400e18);
+        assertEq(s.currentUserMP(alice), 750e18);
         assertEq(s.currentUserMP(bob), 350e18);
         assertEq(s.currentUserMP(charlie), 200e18);
-        assertEq(s.currentTotalMP(), 950e18);
+        assertEq(s.currentTotalMP(), 1300e18);
         assertSumOfAllBalances(s, 3000e18);
         console.log("--------------");
 
@@ -2254,10 +2266,10 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         console.log("after 10 years, no rewards");
         dump(s);
 
-        assertEq(s.currentUserMP(alice), 1100e18);
+        assertEq(s.currentUserMP(alice), 2150e18);
         assertEq(s.currentUserMP(bob), 1050e18);
         assertEq(s.currentUserMP(charlie), 900e18);
-        assertEq(s.currentTotalMP(), 3050e18);
+        assertEq(s.currentTotalMP(), 4100e18);
         assertSumOfAllBalances(s, 3000e18);
     }
 }

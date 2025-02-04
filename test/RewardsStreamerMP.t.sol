@@ -2142,7 +2142,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.claimRewards(charlie);
 
         console.log("rewardIndex    ", s.rewardIndex());
-        console.log("total mp       ", s.totalMP());
+        console.log("total mp       ", s.currentTotalMP());
 
         console.log("alice index    ", s.accountRewardIndex(alice));
         console.log("alice balance  ", s.accountClaimedRewards(alice));
@@ -2200,6 +2200,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(alice), 150e18);
         assertEq(s.currentUserMP(bob), 0);
         assertEq(s.currentUserMP(charlie), 0);
+        assertEq(s.currentTotalMP(), 150e18);
         assertApproxEqAbs(s.accountClaimedRewards(alice), 1000e18, tolerance);
         assertApproxEqAbs(s.accountClaimedRewards(bob), 0, tolerance);
 
@@ -2213,6 +2214,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(alice), 150e18);
         assertEq(s.currentUserMP(bob), 100e18);
         assertEq(s.currentUserMP(charlie), 0);
+        assertEq(s.currentTotalMP(), 250e18);
 
         vm.warp(initialTime + 365 days);
         console.log("after 1 year");
@@ -2223,6 +2225,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
 
         assertEq(s.currentUserMP(alice), 200e18);
         assertEq(s.currentUserMP(bob), 150e18);
+        assertEq(s.currentTotalMP(), 350e18);
         console.log("--------------");
 
         console.log("after 2 years (no rewards)");
@@ -2235,6 +2238,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(alice), 300e18);
         assertEq(s.currentUserMP(bob), 250e18);
         assertEq(s.currentUserMP(charlie), 100e18);
+        assertEq(s.currentTotalMP(), 650e18);
         console.log("--------------");
 
         vm.warp(initialTime + 1095 days);
@@ -2245,6 +2249,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(alice), 400e18);
         assertEq(s.currentUserMP(bob), 350e18);
         assertEq(s.currentUserMP(charlie), 200e18);
+        assertEq(s.currentTotalMP(), 950e18);
         console.log("--------------");
 
         vm.warp(initialTime + 3650 days);
@@ -2254,6 +2259,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(alice), 1100e18);
         assertEq(s.currentUserMP(bob), 1050e18);
         assertEq(s.currentUserMP(charlie), 900e18);
+        assertEq(s.currentTotalMP(), 3050e18);
 
         // console.log("total rewards supply", s.rewardsTotalSupply());
         // console.log("rewardIndex", s.rewardIndex());

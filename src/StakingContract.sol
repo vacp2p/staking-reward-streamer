@@ -48,6 +48,11 @@ contract StakingContract {
         lastMPUpdate = block.timestamp;
     }
 
+    function currentTotalMP() public view returns (uint256) {
+        uint256 timePassed = block.timestamp - lastMPUpdate;
+        return totalMP + (totalStaked * timePassed) / 31_536_000; // 1 year in seconds
+    }
+
     function updateGlobalState() public {
         updateRewardIndex();
         updateGlobalMP();
@@ -55,9 +60,7 @@ contract StakingContract {
 
     // update global MP with 100% APY
     function updateGlobalMP() public {
-        uint256 timePassed = block.timestamp - lastMPUpdate;
-        uint256 newMP = (totalStaked * timePassed) / 31_536_000; // 1 year in seconds
-        totalMP += newMP;
+        totalMP = currentTotalMP();
         lastMPUpdate = block.timestamp;
     }
 
@@ -75,7 +78,7 @@ contract StakingContract {
     }
 
     function updateRewardIndex() public {
-        if (totalMP == 0) {
+        if (currentTotalMP() == 0) {
             return;
         }
 
@@ -83,7 +86,7 @@ contract StakingContract {
 
         uint256 newRewards = rewardBalance > accountedRewards ? rewardBalance - accountedRewards : 0;
         if (newRewards > 0) {
-            rewardIndex += (newRewards * SCALE_FACTOR) / totalMP;
+            rewardIndex += (newRewards * SCALE_FACTOR) / currentTotalMP();
             accountedRewards += newRewards;
         }
     }

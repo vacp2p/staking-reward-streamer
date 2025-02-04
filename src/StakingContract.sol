@@ -85,8 +85,6 @@ contract StakingContract {
             return;
         }
 
-        updateGlobalMP();
-
         uint256 newRewards = rewardBalance > accountedRewards ? rewardBalance - accountedRewards : 0;
         if (newRewards > 0) {
             rewardIndex += (newRewards * SCALE_FACTOR) / currentTotalMP();

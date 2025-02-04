@@ -2136,7 +2136,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
     }
 
     function dump(StakingContract s) public {
-        s.updateGlobalState();
+        s.updateRewardIndex();
         s.claimRewards(alice);
         s.claimRewards(bob);
         s.claimRewards(charlie);
@@ -2166,6 +2166,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         uint256 sum = s.accountClaimedRewards(alice) + s.accountClaimedRewards(bob) + s.accountClaimedRewards(charlie);
         uint256 tolerance = 2000;
         assertApproxEqAbs(sum, expectedAmount, tolerance);
+        assert(sum <= expectedAmount);
     }
 
     function testRewardsBalanceOfStakingAgain() public {

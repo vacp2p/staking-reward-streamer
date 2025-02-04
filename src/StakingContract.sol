@@ -38,6 +38,9 @@ contract StakingContract {
             distributeRewards(msg.sender, userRewards);
         }
 
+        // update user's MP before adding the new stakedBalance
+        // if it's the first time staking, the user's MP will be 0
+        user.mp = currentUserMP(msg.sender);
         user.stakedBalance += amount;
         user.mp += amount;
         user.lastMPUpdate = block.timestamp;

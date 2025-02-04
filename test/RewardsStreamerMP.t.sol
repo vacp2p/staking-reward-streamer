@@ -2160,18 +2160,12 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
             "alice + bob + charlie's balance",
             s.accountClaimedRewards(alice) + s.accountClaimedRewards(bob) + s.accountClaimedRewards(charlie)
         );
+    }
 
-        // (uint256 aStakedAmount, uint256 aMP, uint256 aRewardDebt, uint256 aPendingRewards) = s.getUserInfo(alice);
-        // console.log("alice staked amount", aStakedAmount);
-        // console.log("alice MP", aMP);
-        // console.log("alice reward debt", aRewardDebt);
-        // console.log("alice pending rewards", aPendingRewards);
-
-        // (uint256 bStakedAmount, uint256 bMP, uint256 bRewardDebt, uint256 bPendingRewards) = s.getUserInfo(bob);
-        // console.log("bob staked amount", bStakedAmount);
-        // console.log("bob MP", bMP);
-        // console.log("bob reward debt", bRewardDebt);
-        // console.log("bob pending rewards", bPendingRewards);
+    function assertSumOfAllBalances(StakingContract s, uint256 expectedAmount) public {
+        uint256 sum = s.accountClaimedRewards(alice) + s.accountClaimedRewards(bob) + s.accountClaimedRewards(charlie);
+        uint256 tolerance = 1000;
+        assertApproxEqAbs(sum, expectedAmount, tolerance);
     }
 
     function testRewardsBalanceOfStakingAgain() public {
@@ -2203,6 +2197,8 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentTotalMP(), 150e18);
         assertApproxEqAbs(s.accountClaimedRewards(alice), 1000e18, tolerance);
         assertApproxEqAbs(s.accountClaimedRewards(bob), 0, tolerance);
+        assertApproxEqAbs(s.accountClaimedRewards(charlie), 0, tolerance);
+        assertSumOfAllBalances(s, 1000e18);
 
         console.log("--------------");
 
@@ -2226,6 +2222,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(alice), 200e18);
         assertEq(s.currentUserMP(bob), 150e18);
         assertEq(s.currentTotalMP(), 350e18);
+        assertSumOfAllBalances(s, 2000e18);
         console.log("--------------");
 
         console.log("after 2 years (no rewards)");
@@ -2250,6 +2247,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(bob), 350e18);
         assertEq(s.currentUserMP(charlie), 200e18);
         assertEq(s.currentTotalMP(), 950e18);
+        assertSumOfAllBalances(s, 3000e18);
         console.log("--------------");
 
         vm.warp(initialTime + 3650 days);
@@ -2260,63 +2258,7 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(bob), 1050e18);
         assertEq(s.currentUserMP(charlie), 900e18);
         assertEq(s.currentTotalMP(), 3050e18);
-
-        // console.log("total rewards supply", s.rewardsTotalSupply());
-        // console.log("rewardIndex", s.rewardIndex());
-        // console.log("alice balance", s.rewardsBalanceOf(alice));
-        // console.log("bob balance", s.rewardsBalanceOf(bob));
-
-        // _stake(alice, 100e18, 0);
-        // _stake(bob, 100e18, 0);
-        // assertEq(streamer.rewardsBalanceOf(vaults[alice]), 0);
-
-        // vm.prank(admin);
-        // streamer.setReward(2000e18, 10 days);
-        // assertEq(streamer.rewardsBalanceOf(vaults[alice]), 0);
-        // assertEq(streamer.rewardsBalanceOf(vaults[bob]), 0);
-
-        // vm.warp(initialTime + 5 days);
-
-        // uint256 tolerance = 300; // 300 wei
-        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 500e18, tolerance);
-        // assertApproxEqAbs(streamer.accountAccruedRewards(vaults[alice]), 0, tolerance);
-        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[bob]), 500e18, tolerance);
-        // assertApproxEqAbs(streamer.accountAccruedRewards(vaults[bob]), 0, tolerance);
-
-        // _stake(alice, 100e18, 0);
-        // // console.log("global index", streamer.currentRewardIndex());
-        // // console.log("alice index", streamer.accountRewardIndex(vaults[alice]));
-
-        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 500e18, tolerance);
-        // assertApproxEqAbs(streamer.accountAccruedRewards(vaults[alice]), 500e18, tolerance);
-        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[bob]), 500e18, tolerance);
-        // assertApproxEqAbs(streamer.accountAccruedRewards(vaults[bob]), 0, tolerance);
-
-        // vm.warp(initialTime + 10 days);
-
-        // console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
-
-        // vm.warp(initialTime + 100 days);
-        // console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
-
-        // vm.warp(initialTime + 200 days);
-        // console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
-
-        // vm.warp(initialTime + 10_000 days);
-        // console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
-
-        // assertApproxEqAbs(
-        //     streamer.rewardsBalanceOf(vaults[alice]) + streamer.rewardsBalanceOf(vaults[bob]), 2000e18, tolerance
-        // );
-
-        // console.log("rewards total supply", streamer.totalRewardsSupply());
-        // console.log("alice rewards balance", streamer.rewardsBalanceOf(vaults[alice]));
-        // console.log("alice rewards accrued", streamer.accountAccruedRewards(vaults[alice]));
-        // console.log("bob rewards balance", streamer.rewardsBalanceOf(vaults[bob]));
-        // console.log("bob rewards accrued", streamer.accountAccruedRewards(vaults[bob]));
-
-        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 1_166_666_666_666_666_666_666, tolerance);
-        // assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), 833_333_333_333_333_333_333, tolerance);
+        assertSumOfAllBalances(s, 3000e18);
     }
 }
 

@@ -25,8 +25,13 @@ contract StakingContract {
 
     constructor() { }
 
+    function rewardsTotalSupply() external view returns (uint256) {
+        return rewardBalance;
+    }
+
     function addReward(uint256 amount) external {
         rewardBalance += amount;
+        updateGlobalState();
     }
 
     function stake(uint256 amount) external {
@@ -112,7 +117,8 @@ contract StakingContract {
 
     function calculateUserRewards(address userAddress) public view returns (uint256) {
         UserInfo storage user = users[userAddress];
-        return (currentUserMP(userAddress) * (rewardIndex - user.userRewardIndex)) / SCALE_FACTOR;
+        (, uint256 newRewardIndex) = currentRewardIndex();
+        return (currentUserMP(userAddress) * (newRewardIndex - user.userRewardIndex)) / SCALE_FACTOR;
     }
 
     function currentUserMP(address userAddress) public view returns (uint256) {
@@ -144,6 +150,11 @@ contract StakingContract {
     function accountClaimedRewards(address userAddress) public view returns (uint256) {
         UserInfo storage user = users[userAddress];
         return user.claimedRewards;
+    }
+
+    function accountCurrentRewards(address userAddress) public view returns (uint256) {
+        UserInfo storage user = users[userAddress];
+        return user.claimedRewards + calculateUserRewards(userAddress);
     }
 
     function accountMP(address userAddress) public view returns (uint256) {

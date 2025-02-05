@@ -2253,8 +2253,6 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.stake(100e18);
         dump(s);
 
-        return;
-
         // assertEq(s.currentUserMP(alice), 550e18);
         // assertEq(s.currentUserMP(bob), 250e18);
         // assertEq(s.currentUserMP(charlie), 100e18);
@@ -2266,7 +2264,6 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.addReward(1000e18);
         dump(s);
 
-        return;
         // assertEq(s.currentUserMP(alice), 750e18);
         // assertEq(s.currentUserMP(bob), 350e18);
         // assertEq(s.currentUserMP(charlie), 200e18);

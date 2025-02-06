@@ -2137,9 +2137,9 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
 
     function dump(StakingContract s) public {
         s.updateRewardIndex();
-        s.claimRewards(alice);
-        s.claimRewards(bob);
-        s.claimRewards(charlie);
+        // s.claimRewards(alice);
+        // s.claimRewards(bob);
+        // s.claimRewards(charlie);
 
         console.log("rewardIndex    ", s.rewardIndex());
         console.log("total mp       ", s.currentTotalMP());
@@ -2171,10 +2171,10 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
     }
 
     function assertSumOfAllBalances(StakingContract s, uint256 expectedAmount) public {
-        uint256 sum = s.accountClaimedRewards(alice) + s.accountClaimedRewards(bob) + s.accountClaimedRewards(charlie);
+        uint256 sum = s.rewardsBalanceOf(alice) + s.rewardsBalanceOf(bob) + s.rewardsBalanceOf(charlie);
         uint256 tolerance = 2000;
-        // assertApproxEqAbs(sum, expectedAmount, tolerance);
-        // assert(sum <= expectedAmount);
+        assertApproxEqAbs(sum, expectedAmount, tolerance);
+        assert(sum <= expectedAmount);
     }
 
     function testRewardsBalanceOfStakingAgain() public {
@@ -2209,29 +2209,31 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         assertEq(s.currentUserMP(bob), 0);
         assertEq(s.currentUserMP(charlie), 0);
         assertEq(s.currentTotalMP(), 150e18);
-        // assertApproxEqAbs(s.accountClaimedRewards(alice), 1000e18, tolerance);
-        // assertApproxEqAbs(s.accountClaimedRewards(bob), 0, tolerance);
-        // assertApproxEqAbs(s.accountClaimedRewards(charlie), 0, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(alice), 1000e18, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(bob), 0, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(charlie), 0, tolerance);
         assertSumOfAllBalances(s, 1000e18);
-
         console.log("--------------");
 
         console.log("bob stakes 100");
         vm.prank(bob);
         s.stake(100e18);
-        console.log("alice stakes 100 more");
+        // console.log("alice stakes 100 more");
         // vm.prank(alice);
         // s.stake(100e18);
         console.log("--------------");
 
-        // assertEq(s.totalStaked(), 300e18);
-        // assertEq(s.accountStakedBalance(alice), 200e18);
-        // assertEq(s.accountStakedBalance(bob), 100e18);
-        // assertEq(s.accountStakedBalance(charlie), 0);
-        // assertEq(s.currentUserMP(alice), 250e18);
-        // assertEq(s.currentUserMP(bob), 100e18);
-        // assertEq(s.currentUserMP(charlie), 0);
-        // assertEq(s.currentTotalMP(), 350e18);
+        assertEq(s.totalStaked(), 200e18);
+        assertEq(s.accountStakedBalance(alice), 100e18);
+        assertEq(s.accountStakedBalance(bob), 100e18);
+        assertEq(s.accountStakedBalance(charlie), 0);
+        assertEq(s.currentUserMP(alice), 150e18);
+        assertEq(s.currentUserMP(bob), 100e18);
+        assertEq(s.currentUserMP(charlie), 0);
+        assertEq(s.currentTotalMP(), 250e18);
+        assertApproxEqAbs(s.rewardsBalanceOf(alice), 1000e18, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(bob), 0, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(charlie), 0, tolerance);
 
         vm.warp(initialTime + 365 days);
         console.log("after 1 year");
@@ -2240,10 +2242,13 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
 
         dump(s);
 
-        // assertEq(s.currentUserMP(alice), 350e18);
-        // assertEq(s.currentUserMP(bob), 150e18);
-        // assertEq(s.currentTotalMP(), 500e18);
-        // assertSumOfAllBalances(s, 2000e18);
+        assertEq(s.currentUserMP(alice), 200e18);
+        assertEq(s.currentUserMP(bob), 150e18);
+        assertEq(s.currentTotalMP(), 350e18);
+        assertSumOfAllBalances(s, 2000e18);
+        assertApproxEqAbs(s.rewardsBalanceOf(alice), 1500e18, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(bob), 500e18, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(charlie), 0, tolerance);
         console.log("--------------");
 
         console.log("after 2 years (no rewards)");
@@ -2253,10 +2258,13 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.stake(100e18);
         dump(s);
 
-        // assertEq(s.currentUserMP(alice), 550e18);
-        // assertEq(s.currentUserMP(bob), 250e18);
-        // assertEq(s.currentUserMP(charlie), 100e18);
-        // assertEq(s.currentTotalMP(), 900e18);
+        assertEq(s.currentUserMP(alice), 300e18);
+        assertEq(s.currentUserMP(bob), 250e18);
+        assertEq(s.currentUserMP(charlie), 100e18);
+        assertEq(s.currentTotalMP(), 650e18);
+        assertApproxEqAbs(s.rewardsBalanceOf(alice), 1500e18, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(bob), 500e18, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(charlie), 0, tolerance);
         console.log("--------------");
 
         vm.warp(initialTime + 1095 days);
@@ -2264,26 +2272,28 @@ contract RewardsStreamerMP_RewardsTest is RewardsStreamerMPTest {
         s.addReward(1000e18);
         dump(s);
 
-        // assertEq(s.currentUserMP(alice), 750e18);
-        // assertEq(s.currentUserMP(bob), 350e18);
-        // assertEq(s.currentUserMP(charlie), 200e18);
-        // assertEq(s.currentTotalMP(), 1300e18);
-        // assertSumOfAllBalances(s, 3000e18);
+        assertEq(s.currentUserMP(alice), 400e18);
+        assertEq(s.currentUserMP(bob), 350e18);
+        assertEq(s.currentUserMP(charlie), 200e18);
+        assertEq(s.currentTotalMP(), 950e18);
+        assertSumOfAllBalances(s, 3000e18);
+        assertApproxEqAbs(s.rewardsBalanceOf(alice), 1_833_333_333_333_333_333_333, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(bob), 833_333_333_333_333_333_333, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(charlie), 333_333_333_333_333_333_333, tolerance);
         console.log("--------------");
 
         vm.warp(initialTime + 3650 days);
         console.log("after 10 years, no rewards");
         dump(s);
 
-        // assertEq(s.currentUserMP(alice), 2150e18);
-        // assertEq(s.currentUserMP(bob), 1050e18);
-        // assertEq(s.currentUserMP(charlie), 900e18);
-        // assertEq(s.currentTotalMP(), 4100e18);
-        // assertSumOfAllBalances(s, 3000e18);
-
-        // s.claimRewards(alice);
-        // s.claimRewards(bob);
-        // s.claimRewards(charlie);
+        assertEq(s.currentUserMP(alice), 1100e18);
+        assertEq(s.currentUserMP(bob), 1050e18);
+        assertEq(s.currentUserMP(charlie), 900e18);
+        assertEq(s.currentTotalMP(), 3050e18);
+        assertSumOfAllBalances(s, 3000e18);
+        assertApproxEqAbs(s.rewardsBalanceOf(alice), 1_833_333_333_333_333_333_333, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(bob), 833_333_333_333_333_333_333, tolerance);
+        assertApproxEqAbs(s.rewardsBalanceOf(charlie), 333_333_333_333_333_333_333, tolerance);
         dump(s);
     }
 }

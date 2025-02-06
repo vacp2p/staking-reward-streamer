@@ -100,7 +100,7 @@ contract StakingContract {
     function currentRewardIndex() public view returns (uint256, uint256) {
         uint256 newRewards = rewardBalance > accountedRewards ? rewardBalance - accountedRewards : 0;
         if (newRewards > 0) {
-            uint256 newRewardIndex = rewardIndex + (newRewards * SCALE_FACTOR) / currentTotalMP();
+            uint256 newRewardIndex = rewardIndex + (newRewards * SCALE_FACTOR) / totalStaked;
             return (newRewards, newRewardIndex);
         } else {
             return (0, rewardIndex);
@@ -118,7 +118,7 @@ contract StakingContract {
     function calculateUserRewards(address userAddress) public view returns (uint256) {
         UserInfo storage user = users[userAddress];
         (, uint256 newRewardIndex) = currentRewardIndex();
-        return (currentUserMP(userAddress) * (newRewardIndex - user.userRewardIndex)) / SCALE_FACTOR;
+        return (user.stakedBalance * (newRewardIndex - user.userRewardIndex)) / SCALE_FACTOR;
     }
 
     function currentUserMP(address userAddress) public view returns (uint256) {
@@ -140,6 +140,11 @@ contract StakingContract {
         UserInfo storage user = users[to];
         user.userRewardIndex = rewardIndex;
         user.claimedRewards += amount;
+    }
+
+    function rewardsBalanceOf(address userAddress) public view returns (uint256) {
+        UserInfo storage user = users[userAddress];
+        return user.claimedRewards + calculateUserRewards(userAddress);
     }
 
     function accountRewardIndex(address userAddress) public view returns (uint256) {

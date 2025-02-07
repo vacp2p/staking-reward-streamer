@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { console } from "forge-std/console.sol";
+
 contract TimeWeightedStakingWithRewards {
     uint256 public constant MULTIPLIER = 1e18;
     uint256 public constant ONE_YEAR = 365 days;
@@ -39,6 +41,29 @@ contract TimeWeightedStakingWithRewards {
         totalShares += mintedShares;
 
         account.settledRewards = (account.shares * accRewardPerShare) / MULTIPLIER;
+    }
+
+    function unstake(uint256 originalAmount) external {
+        require(originalAmount > 0, "Cannot unstake 0");
+        Account storage account = accounts[msg.sender];
+        require(originalAmount <= account.shares, "Insufficient balance");
+
+        uint256 currentRewardDebt = (account.shares * accRewardPerShare) / MULTIPLIER;
+
+        if (account.settledRewards < currentRewardDebt) {
+            account.settledRewards = currentRewardDebt;
+        }
+
+        uint256 rewardDebtReduction = (originalAmount * accRewardPerShare) / MULTIPLIER;
+        require(account.settledRewards >= rewardDebtReduction, "Reward accounting underflow");
+        account.settledRewards -= rewardDebtReduction;
+
+        // burn shares
+        account.shares -= originalAmount;
+        totalShares -= originalAmount;
+
+        uint256 payout = originalAmount;
+        // send back the original staked tokens
     }
 
     function addRewards(uint256 rewardAmount) external {

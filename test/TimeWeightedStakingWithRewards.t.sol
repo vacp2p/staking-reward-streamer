@@ -79,4 +79,40 @@ contract TimeWeightedStakingWithRewardsTest is Test {
 
         // staking.addRewards(1000e18);
     }
+
+    function testTimeWeightedRewardsUnstake() public {
+        // Capture the start time from the contract.
+        uint256 start = staking.multiplierStartTime();
+
+        console.log("day 0");
+        console.log("alice stakes 100");
+        vm.prank(alice);
+        staking.deposit(100e18);
+        dump();
+
+        console.log("1 year");
+        console.log("add 1000 rewards");
+        vm.warp(start + 365 days);
+        staking.addRewards(1000e18);
+
+        console.log("bob stakes 100");
+        vm.prank(bob);
+        staking.deposit(100e18);
+        dump();
+
+        console.log("2 years");
+        console.log("add 1000 rewards");
+        vm.warp(start + 730 days);
+        staking.addRewards(1000e18);
+
+        dump();
+
+        console.log("3 years alice unstakes 100");
+        console.log("add 1000 rewards");
+        vm.warp(start + 730 days);
+        vm.prank(alice);
+        staking.unstake(100e18);
+        staking.addRewards(1000e18);
+        dump();
+    }
 }

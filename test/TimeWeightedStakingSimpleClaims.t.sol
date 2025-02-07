@@ -17,10 +17,10 @@ contract TimeWeightedStakingSimpleClaims is Test {
     function dump() public view {
         console.log("--------------------");
         console.log("Alice:");
-        console.log("  Shares:      ", staking.sharesOf(alice));
+        // console.log("  Shares:      ", staking.sharesOf(alice));
         console.log("  Rewards:     ", staking.rewardsBalanceOf(alice));
         console.log("Bob:");
-        console.log("  Shares:      ", staking.sharesOf(bob));
+        // console.log("  Shares:      ", staking.sharesOf(bob));
         console.log("  Rewards:     ", staking.rewardsBalanceOf(bob));
         console.log("Total:");
         console.log("  All Shares:  ", staking.totalShares());
@@ -59,7 +59,7 @@ contract TimeWeightedStakingSimpleClaims is Test {
         console.log("Claiming rewards after 2 years");
         uint256 aliceRewards = staking.rewardsBalanceOf(alice);
         uint256 bobRewards = staking.rewardsBalanceOf(bob);
-        
+
         console.log("Alice claims", aliceRewards);
         console.log("Bob claims", bobRewards);
         dump();

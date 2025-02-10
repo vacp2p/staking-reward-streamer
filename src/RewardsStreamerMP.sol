@@ -12,6 +12,8 @@ import { IRewardProvider } from "./interfaces/IRewardProvider.sol";
 import { TrustedCodehashAccess } from "./TrustedCodehashAccess.sol";
 import { StakeMath } from "./math/StakeMath.sol";
 
+import { UD60x18, ud, add, mul, div, unwrap } from "@prb/math/src/UD60x18.sol";
+
 // Rewards Streamer with Multiplier Points
 contract RewardsStreamerMP is
     Initializable,
@@ -42,7 +44,7 @@ contract RewardsStreamerMP is
     uint256 public totalStaked;
     uint256 public totalMPAccrued;
     uint256 public totalMaxMP;
-    uint256 public rewardIndex;
+    UD60x18 public rewardIndex;
     uint256 public lastMPUpdatedTime;
     bool public emergencyModeEnabled;
 
@@ -54,7 +56,7 @@ contract RewardsStreamerMP is
 
     struct VaultData {
         uint256 stakedBalance;
-        uint256 rewardIndex;
+        UD60x18 rewardIndex;
         uint256 mpAccrued;
         uint256 maxMP;
         uint256 lastMPUpdateTime;
@@ -293,7 +295,7 @@ contract RewardsStreamerMP is
             _unstake(vault.stakedBalance, vault, msg.sender);
 
             // further cleanup that isn't done in `_unstake`
-            vault.rewardIndex = 0;
+            vault.rewardIndex = ud(0);
             vault.lockUntil = 0;
         }
     }
@@ -308,42 +310,37 @@ contract RewardsStreamerMP is
     }
 
     function updateGlobalMP() internal {
-        (uint256 adjustedRewardIndex, uint256 newTotalMPAccrued) = _pendingTotalMPAccrued();
+        uint256 currentTime = block.timestamp;
+        (UD60x18 adjustedRewardIndex, uint256 newTotalMPAccrued) = _pendingTotalMPAccrued(currentTime);
         if (newTotalMPAccrued > totalMPAccrued) {
             totalMPAccrued = newTotalMPAccrued;
-            lastMPUpdatedTime = block.timestamp;
+            lastMPUpdatedTime = currentTime;
         }
 
-        if (adjustedRewardIndex != rewardIndex) {
+        if (!adjustedRewardIndex.eq(rewardIndex)) {
             rewardIndex = adjustedRewardIndex;
         }
     }
 
-    function _pendingTotalMPAccrued() internal view returns (uint256, uint256) {
-        uint256 adjustedRewardIndex = rewardIndex;
+    function _pendingTotalMPAccrued(uint256 currentTime) internal view returns (UD60x18, uint256) {
+        UD60x18 adjustedRewardIndex = rewardIndex;
 
         if (totalMaxMP == 0) {
             return (adjustedRewardIndex, totalMPAccrued);
         }
 
-        uint256 currentTime = block.timestamp;
         uint256 timeDiff = currentTime - lastMPUpdatedTime;
         if (timeDiff == 0) {
             return (adjustedRewardIndex, totalMPAccrued);
         }
-
-        uint256 accruedMP = _accrueMP(totalStaked, timeDiff);
-        if (totalMPAccrued + accruedMP > totalMaxMP) {
-            accruedMP = totalMaxMP - totalMPAccrued;
-        }
-
-        uint256 newTotalMPAccrued = totalMPAccrued + accruedMP;
+        uint256 deltaMP = _calculateAccrual(totalStaked, totalMPAccrued, totalMaxMP, lastMPUpdatedTime, currentTime);
+        uint256 newTotalMPAccrued = totalMPAccrued + deltaMP;
 
         // Adjust rewardIndex before updating totalMP
         uint256 previousTotalWeight = totalStaked + totalMPAccrued;
         uint256 newTotalWeight = totalStaked + newTotalMPAccrued;
         if (previousTotalWeight != 0 && newTotalWeight != previousTotalWeight) {
-            adjustedRewardIndex = (rewardIndex * previousTotalWeight) / newTotalWeight;
+            adjustedRewardIndex = (rewardIndex.mul(ud(newTotalWeight))).div(ud(previousTotalWeight));
         }
 
         return (adjustedRewardIndex, newTotalMPAccrued);
@@ -369,13 +366,11 @@ contract RewardsStreamerMP is
         rewardEndTime = block.timestamp + duration;
     }
 
-    function _calculatePendingRewards() internal view returns (uint256) {
+    function _calculatePendingRewards(uint256 currentTime) internal view returns (uint256) {
         if (rewardEndTime <= rewardStartTime) {
             // No active reward period
             return 0;
         }
-
-        uint256 currentTime = block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime;
 
         if (currentTime <= lastRewardTime) {
             // No new rewards have accrued since lastRewardTime
@@ -396,45 +391,45 @@ contract RewardsStreamerMP is
 
     function updateRewardIndex() internal {
         uint256 accruedRewards;
-        uint256 newRewardIndex;
-
-        (accruedRewards, newRewardIndex) = _pendingRewardIndex();
+        UD60x18 newRewardIndex;
+        uint256 currentTime = block.timestamp;
+        (accruedRewards, newRewardIndex) = _pendingRewardIndex(currentTime);
         totalRewardsAccrued += accruedRewards;
 
-        if (newRewardIndex > rewardIndex) {
+        if (newRewardIndex.gt(rewardIndex)) {
             rewardIndex = newRewardIndex;
-            lastRewardTime = block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime;
+            lastRewardTime = currentTime < rewardEndTime ? currentTime : rewardEndTime;
         }
     }
 
-    function pendingRewardIndex() external view returns (uint256) {
-        uint256 newRewardIndex;
-        (, newRewardIndex) = _pendingRewardIndex();
+    function pendingRewardIndex() external view returns (UD60x18) {
+        UD60x18 newRewardIndex;
+        (, newRewardIndex) = _pendingRewardIndex(block.timestamp);
         return newRewardIndex;
     }
 
-    function _pendingRewardIndex() internal view returns (uint256, uint256) {
-        (uint256 adjustedRewardIndex, uint256 newTotalMPAccrued) = _pendingTotalMPAccrued();
+    function _pendingRewardIndex(uint256 currentTime) internal view returns (uint256, UD60x18) {
+        (UD60x18 adjustedRewardIndex, uint256 newTotalMPAccrued) = _pendingTotalMPAccrued(currentTime);
         uint256 totalWeight = totalStaked + newTotalMPAccrued;
 
         if (totalWeight == 0) {
             return (0, rewardIndex);
         }
 
-        uint256 currentTime = block.timestamp;
         uint256 applicableTime = rewardEndTime > currentTime ? currentTime : rewardEndTime;
+        
         uint256 elapsedTime = applicableTime - lastRewardTime;
 
         if (elapsedTime == 0) {
             return (0, rewardIndex);
         }
 
-        uint256 accruedRewards = _calculatePendingRewards();
+        uint256 accruedRewards = _calculatePendingRewards(applicableTime);
         if (accruedRewards == 0) {
             return (0, rewardIndex);
         }
 
-        uint256 newRewardIndex = adjustedRewardIndex + Math.mulDiv(accruedRewards, SCALE_FACTOR, totalWeight);
+        UD60x18 newRewardIndex = adjustedRewardIndex.add(ud(accruedRewards).div(ud(totalWeight)));
 
         return (accruedRewards, newRewardIndex);
     }
@@ -483,19 +478,19 @@ contract RewardsStreamerMP is
     }
 
     function totalRewardsSupply() public view returns (uint256) {
-        return totalRewardsAccrued + _calculatePendingRewards();
+        return totalRewardsAccrued + _calculatePendingRewards(block.timestamp < rewardEndTime ? block.timestamp : rewardEndTime);
     }
 
     function rewardsBalanceOf(address vaultAddress) public view returns (uint256) {
-        uint256 newRewardIndex;
-        (, newRewardIndex) = _pendingRewardIndex();
+        UD60x18 newRewardIndex;
+        (, newRewardIndex) = _pendingRewardIndex(block.timestamp);
 
         VaultData storage vault = vaultData[vaultAddress];
 
         uint256 accountWeight = vault.stakedBalance + _mpBalanceOf(vaultAddress);
-        uint256 deltaRewardIndex = newRewardIndex - vault.rewardIndex;
+        UD60x18 deltaRewardIndex = newRewardIndex.sub(vault.rewardIndex);
 
-        return (accountWeight * deltaRewardIndex) / SCALE_FACTOR;
+        return ud(accountWeight).mul(deltaRewardIndex).unwrap();
     }
 
     function rewardsBalanceOfAccount(address account) external view returns (uint256) {

@@ -33,7 +33,7 @@ contract TimeWeightedStakingWithRewardsTest is Test {
         console.log("day 0");
         console.log("alice stakes 100");
         vm.prank(alice);
-        staking.deposit(100e18);
+        staking.stake(100e18);
         dump();
 
         console.log("1 year");
@@ -43,7 +43,7 @@ contract TimeWeightedStakingWithRewardsTest is Test {
 
         console.log("bob stakes 100");
         vm.prank(bob);
-        staking.deposit(100e18);
+        staking.stake(100e18);
         dump();
 
         console.log("2 years");
@@ -53,7 +53,7 @@ contract TimeWeightedStakingWithRewardsTest is Test {
 
         console.log("charlie stakes 100");
         vm.prank(charlie);
-        staking.deposit(100e18);
+        staking.stake(100e18);
 
         dump();
 
@@ -87,7 +87,7 @@ contract TimeWeightedStakingWithRewardsTest is Test {
         console.log("day 0");
         console.log("alice stakes 100");
         vm.prank(alice);
-        staking.deposit(100e18);
+        staking.stake(100e18);
         dump();
 
         console.log("1 year");
@@ -96,8 +96,10 @@ contract TimeWeightedStakingWithRewardsTest is Test {
         staking.addRewards(1000e18);
 
         console.log("bob stakes 100");
+        console.log("alice weight 200");
+        console.log("bob   weight 100");
         vm.prank(bob);
-        staking.deposit(100e18);
+        staking.stake(100e18);
         dump();
 
         console.log("2 years");
@@ -105,13 +107,20 @@ contract TimeWeightedStakingWithRewardsTest is Test {
         vm.warp(start + 730 days);
         staking.addRewards(1000e18);
 
+        console.log("alice weight 300");
+        console.log("bob   weight 200");
         dump();
 
+        console.log("3 years alice");
+        console.log("alice weight 400");
+        console.log("bob   weight 300");
         console.log("3 years alice unstakes 100");
-        console.log("add 1000 rewards");
+        console.log("alice weight 400");
+        console.log("bob   weight 300");
         vm.warp(start + 730 days);
         vm.prank(alice);
-        staking.unstake(100e18);
+        staking.unstake(50e18);
+        console.log("add 1000 rewards");
         staking.addRewards(1000e18);
         dump();
     }

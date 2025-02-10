@@ -34,7 +34,7 @@ contract TimeWeightedStakingSimpleClaims is Test {
 
         console.log("Day 0: Alice stakes 100");
         vm.prank(alice);
-        staking.deposit(100e18);
+        staking.stake(100e18);
         dump();
 
         console.log("Half Year Passed - No Rewards Yet");
@@ -48,7 +48,7 @@ contract TimeWeightedStakingSimpleClaims is Test {
 
         console.log("Start of Year 2: Bob stakes 100");
         vm.prank(bob);
-        staking.deposit(100e18);
+        staking.stake(100e18);
         dump();
 
         console.log("End of Year 2: Add 1000 rewards");

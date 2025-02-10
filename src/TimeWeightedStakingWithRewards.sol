@@ -28,7 +28,7 @@ contract TimeWeightedStakingWithRewards {
         return MULTIPLIER + (elapsed * MULTIPLIER / ONE_YEAR);
     }
 
-    function deposit(uint256 amount) external {
+    function stake(uint256 amount) external {
         require(amount > 0, "Cannot deposit 0");
 
         Account storage account = accounts[msg.sender];
@@ -51,6 +51,7 @@ contract TimeWeightedStakingWithRewards {
         uint256 currentRewardDebt = (account.shares * accRewardPerShare) / MULTIPLIER;
 
         if (account.settledRewards < currentRewardDebt) {
+            // uint256 pending = currentRewardDebt - account.settledRewards;
             account.settledRewards = currentRewardDebt;
         }
 

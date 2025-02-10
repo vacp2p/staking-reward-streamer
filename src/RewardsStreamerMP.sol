@@ -433,9 +433,9 @@ contract RewardsStreamerMP is
         _updateVault(vaultAddress, true);
 
         uint256 mpToStake = vault.mpAccrued - vault.mpStaked;
-        if (mpToStake == 0) {
-            revert StakingManager__InsufficientBalance();
-        }
+        // if (mpToStake == 0) {
+        //     revert StakingManager__InsufficientBalance();
+        // }
 
         vault.mpStaked += mpToStake;
         totalMPStaked += mpToStake;

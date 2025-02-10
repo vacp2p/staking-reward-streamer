@@ -2284,6 +2284,64 @@ contract FuzzTests is RewardsStreamerMPTest {
         );
     }
 
+    function testFuzz_Rewards(
+        uint256 stakeAmount,
+        uint256 lockUpPeriod,
+        uint256 rewardAmount,
+        uint16 rewardPeriod,
+        uint16 accountRewardPeriod
+    )
+        public
+    {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
+        vm.assume(rewardPeriod > 0);
+        vm.assume(rewardAmount > 0);
+
+        uint256 initialTime = vm.getBlockTimestamp();
+        uint256 tolerance = 300; // 300 wei
+        uint256 expectedReward = accountRewardPeriod < rewardPeriod
+            ? Math.mulDiv(accountRewardPeriod, rewardAmount, rewardPeriod)
+            : rewardAmount;
+
+        _stake(alice, stakeAmount, lockUpPeriod);
+        vm.prank(admin);
+        streamer.setReward(rewardAmount, rewardPeriod);
+        vm.warp(initialTime + accountRewardPeriod);
+
+        assertEq(streamer.totalRewardsSupply(), expectedReward, "Total rewards supply mismatch");
+        assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), expectedReward, tolerance);
+    }
+
+    //This test is covered by `testFuzz_Rewards`, and can be removed after fixing the issue with precision loss, only
+    // added for debugging purposes.
+    //This test uses the full rewardPeriod for comparing the expected reward, which should be the same as the total
+    // reward amount.
+    function test_Debug1_Fuzz_Rewards(
+        uint256 stakeAmount,
+        uint256 lockUpPeriod,
+        uint256 rewardAmount,
+        uint16 rewardPeriod
+    )
+        public
+    {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
+        vm.assume(rewardPeriod > 0);
+        vm.assume(rewardAmount > 0);
+        uint256 initialTime = vm.getBlockTimestamp();
+        uint256 tolerance = 300; // 300 wei
+        uint256 expectedReward = rewardAmount;
+
+        _stake(alice, stakeAmount, lockUpPeriod);
+        vm.prank(admin);
+        streamer.setReward(rewardAmount, rewardPeriod);
+        vm.warp(initialTime + rewardPeriod);
+
+        assertEq(streamer.totalRewardsSupply(), rewardAmount, "Total rewards supply mismatch");
+        assertApproxEqAbs(streamer.rewardsBalanceOf(vaults[alice]), rewardAmount, tolerance);
+    }
+
     function testFuzz_EmergencyExit(uint256 stakeAmount, uint256 lockUpPeriod) public {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
         vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));

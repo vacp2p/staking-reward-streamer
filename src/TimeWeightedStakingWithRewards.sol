@@ -9,12 +9,12 @@ contract TimeWeightedStakingWithRewards {
 
     uint256 public multiplierStartTime;
     uint256 public totalShares;
-
     uint256 public accRewardPerShare;
 
     struct Account {
-        uint256 shares;
+        uint256 shares; // invariant shares
         uint256 settledRewards;
+        uint256 principal;
     }
 
     mapping(address => Account) public accounts;
@@ -32,39 +32,40 @@ contract TimeWeightedStakingWithRewards {
         require(amount > 0, "Cannot deposit 0");
 
         Account storage account = accounts[msg.sender];
-
         uint256 scaling = currentScalingFactor();
 
-        // shares proportional to the deposit and inversely proportional to scaling.
+        // Mint invariant shares based on the current scaling factor.
         uint256 mintedShares = (amount * MULTIPLIER) / scaling;
         account.shares += mintedShares;
         totalShares += mintedShares;
 
+        // Track the original deposit (principal).
+        account.principal += amount;
+
+        // Settle reward accounting for the updated share balance.
         account.settledRewards = (account.shares * accRewardPerShare) / MULTIPLIER;
     }
 
-    function unstake(uint256 originalAmount) external {
-        require(originalAmount > 0, "Cannot unstake 0");
+    function unstake(uint256 amount) external {
+        require(amount > 0, "Cannot unstake 0");
         Account storage account = accounts[msg.sender];
-        require(originalAmount <= account.shares, "Insufficient balance");
+        uint256 oldShares = account.shares;
+        require(amount <= oldShares, "Insufficient balance");
 
-        uint256 currentRewardDebt = (account.shares * accRewardPerShare) / MULTIPLIER;
+        // Calculate the new share balance after unstaking.
+        uint256 remainingShares = oldShares - amount;
 
-        if (account.settledRewards < currentRewardDebt) {
-            // uint256 pending = currentRewardDebt - account.settledRewards;
-            account.settledRewards = currentRewardDebt;
-        }
+        account.settledRewards = (account.settledRewards * remainingShares) / oldShares;
 
-        uint256 rewardDebtReduction = (originalAmount * accRewardPerShare) / MULTIPLIER;
-        require(account.settledRewards >= rewardDebtReduction, "Reward accounting underflow");
-        account.settledRewards -= rewardDebtReduction;
+        // Burn the invariant shares.
+        account.shares = remainingShares;
+        totalShares -= amount;
 
-        // burn shares
-        account.shares -= originalAmount;
-        totalShares -= originalAmount;
+        // Update the principal (original staked tokens) for the account.
+        require(account.principal >= amount, "Principal underflow");
+        account.principal -= amount;
 
-        uint256 payout = originalAmount;
-        // send back the original staked tokens
+        // In pro transfer `amount` of staked tokens back to the user.
     }
 
     function addRewards(uint256 rewardAmount) external {
@@ -78,8 +79,17 @@ contract TimeWeightedStakingWithRewards {
         pending = (account.shares * accRewardPerShare) / MULTIPLIER - account.settledRewards;
     }
 
+    // Returns the effective time-weighted balance.
     function effectiveBalance(address user) public view returns (uint256) {
         Account storage account = accounts[user];
         return (account.shares * currentScalingFactor()) / MULTIPLIER;
+    }
+
+    function principalOf(address user) public view returns (uint256) {
+        return accounts[user].principal;
+    }
+
+    function accountSharesOf(address user) public view returns (uint256) {
+        return accounts[user].shares;
     }
 }

@@ -49,23 +49,24 @@ contract TimeWeightedStakingWithRewards {
     function unstake(uint256 amount) external {
         require(amount > 0, "Cannot unstake 0");
         Account storage account = accounts[msg.sender];
+        require(amount <= account.principal, "Insufficient principal");
+
+        uint256 sharesPerToken = (account.shares * MULTIPLIER) / account.principal;
+        uint256 sharesToBurn = (amount * sharesPerToken) / MULTIPLIER;
+
         uint256 oldShares = account.shares;
-        require(amount <= oldShares, "Insufficient balance");
+        uint256 remainingShares = oldShares - sharesToBurn;
 
-        // Calculate the new share balance after unstaking.
-        uint256 remainingShares = oldShares - amount;
-
+        // Adjust settledRewards proportionally for the remaining shares:
         account.settledRewards = (account.settledRewards * remainingShares) / oldShares;
 
-        // Burn the invariant shares.
+        // burn shares and update totalShares
         account.shares = remainingShares;
-        totalShares -= amount;
+        totalShares -= sharesToBurn;
 
-        // Update the principal (original staked tokens) for the account.
-        require(account.principal >= amount, "Principal underflow");
         account.principal -= amount;
 
-        // In pro transfer `amount` of staked tokens back to the user.
+        // In prod, transfer `amount` tokens back to the user
     }
 
     function addRewards(uint256 rewardAmount) external {

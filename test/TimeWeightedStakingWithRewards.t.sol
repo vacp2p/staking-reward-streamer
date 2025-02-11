@@ -118,7 +118,7 @@ contract TimeWeightedStakingWithRewardsTest is Test {
         dump();
 
         console.log("3 years alice");
-        console.log("3 years alice unstakes 100");
+        console.log("3 years alice unstakes 50");
         vm.warp(start + 730 days);
         vm.prank(alice);
         staking.unstake(50e18);

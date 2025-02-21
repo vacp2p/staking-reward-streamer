@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { console } from "forge-std/Test.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -450,6 +451,8 @@ contract RewardsStreamerMP is
     }
 
     function _liveRewardIndex() internal view returns (uint256, uint256) {
+        console.log("Live reward index:");
+        console.log("-----------------");
         uint256 shares = _totalShares();
 
         if (shares == 0) {
@@ -460,6 +463,10 @@ contract RewardsStreamerMP is
         uint256 applicableTime = rewardEndTime > currentTime ? currentTime : rewardEndTime;
         uint256 elapsedTime = applicableTime - lastRewardTime;
 
+        console.log("totalShares: ", shares);
+        console.log("applicableTime: ", applicableTime);
+        console.log("elapsedTime: ", elapsedTime);
+
         if (elapsedTime == 0) {
             return (0, rewardIndex);
         }
@@ -468,6 +475,7 @@ contract RewardsStreamerMP is
         if (accruedRewards == 0) {
             return (0, rewardIndex);
         }
+        console.log("accruedRewards: ", accruedRewards);
 
         uint256 newRewardIndex = rewardIndex + Math.mulDiv(accruedRewards, SCALE_FACTOR, shares);
 
@@ -525,6 +533,8 @@ contract RewardsStreamerMP is
 
     function rewardsBalanceOf(address vaultAddress) public view returns (uint256) {
         VaultData storage vault = vaultData[vaultAddress];
+        console.log("rewardsBalanceOf:");
+        console.log("==================");
         return vault.rewardsAccrued + _vaultPendingRewards(vault);
     }
 
@@ -534,6 +544,11 @@ contract RewardsStreamerMP is
 
         uint256 accountShares = vault.stakedBalance + vault.mpStaked;
         uint256 deltaRewardIndex = newRewardIndex - vault.rewardIndex;
+
+        console.log("accountShares: ", accountShares);
+        console.log("newRewardIndex: ", newRewardIndex);
+        console.log("vaultRewardIndex: ", vault.rewardIndex);
+        console.log("deltaRewardIndex: ", deltaRewardIndex);
 
         return (accountShares * deltaRewardIndex) / SCALE_FACTOR;
     }

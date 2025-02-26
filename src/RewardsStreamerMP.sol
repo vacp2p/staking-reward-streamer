@@ -74,6 +74,9 @@ contract RewardsStreamerMP is
     /// @notice Total amount of staked multiplier points
     uint256 public totalMPStaked;
 
+    /// @notice The address that can set rewards
+    address public rewardsSupplier;
+
     modifier onlyRegisteredVault() {
         if (vaultOwners[msg.sender] == address(0)) {
             revert StakingManager__VaultNotRegistered();
@@ -84,6 +87,13 @@ contract RewardsStreamerMP is
     modifier onlyNotEmergencyMode() {
         if (emergencyModeEnabled) {
             revert StakingManager__EmergencyModeEnabled();
+        }
+        _;
+    }
+
+    modifier onlyRewardsSupplier() {
+        if (msg.sender != rewardsSupplier) {
+            revert StakingManager__Unauthorized();
         }
         _;
     }
@@ -102,13 +112,18 @@ contract RewardsStreamerMP is
      * @param _owner Address of the owner of the contract.
      * @param _stakingToken Address of the staking token.
      */
-    function initialize(address _owner, address _stakingToken) public initializer {
+    function initialize(address _owner, address _stakingToken, address _rewardsSupplier) public initializer {
         __TrustedCodehashAccess_init(_owner);
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
 
         STAKING_TOKEN = IERC20(_stakingToken);
         lastMPUpdatedTime = block.timestamp;
+        rewardsSupplier = _rewardsSupplier;
+    }
+
+    function setRewardsSupplier(address _rewardsSupplier) external onlyOwner {
+        rewardsSupplier = _rewardsSupplier;
     }
 
     /**
@@ -417,7 +432,8 @@ contract RewardsStreamerMP is
      * @param amount The amount of rewards to distribute.
      * @param duration The duration of the reward period.
      */
-    function setReward(uint256 amount, uint256 duration) external onlyOwner {
+    function setReward(uint256 amount, uint256 duration) external onlyRewardsSupplier {
+        //FIXME: revert if current period is not over?
         if (duration == 0) {
             revert StakingManager__DurationCannotBeZero();
         }

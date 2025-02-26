@@ -5,4 +5,5 @@ interface IRewardProvider {
     function totalRewardsSupply() external view returns (uint256);
     function rewardsBalanceOf(address account) external view returns (uint256);
     function rewardsBalanceOfAccount(address user) external view returns (uint256);
+    function setReward(uint256 amount, uint256 duration) external;
 }

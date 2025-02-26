@@ -15,9 +15,10 @@ import { VaultFactory } from "../src/VaultFactory.sol";
 contract DeployRewardsStreamerMPScript is BaseScript {
     function run() public returns (RewardsStreamerMP, VaultFactory, DeploymentConfig) {
         DeploymentConfig deploymentConfig = new DeploymentConfig(broadcaster);
-        (address deployer, address stakingToken) = deploymentConfig.activeNetworkConfig();
+        (address deployer, address stakingToken, address rewardsSupplier) = deploymentConfig.activeNetworkConfig();
 
-        bytes memory initializeData = abi.encodeCall(RewardsStreamerMP.initialize, (deployer, stakingToken));
+        bytes memory initializeData =
+            abi.encodeCall(RewardsStreamerMP.initialize, (deployer, stakingToken, rewardsSupplier));
 
         vm.startBroadcast(deployer);
 

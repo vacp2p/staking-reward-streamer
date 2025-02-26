@@ -17,6 +17,7 @@ import { RewardsStreamerMP } from "../src/RewardsStreamerMP.sol";
 import { StakeMath } from "../src/math/StakeMath.sol";
 import { StakeVault } from "../src/StakeVault.sol";
 import { VaultFactory } from "../src/VaultFactory.sol";
+import { Karma } from "../src/Karma.sol";
 import { MockToken } from "./mocks/MockToken.sol";
 import { StackOverflowStakeManager } from "./mocks/StackOverflowStakeManager.sol";
 
@@ -24,6 +25,7 @@ contract RewardsStreamerMPTest is StakeMath, Test {
     MockToken internal stakingToken;
     RewardsStreamerMP public streamer;
     VaultFactory public vaultFactory;
+    Karma public rewardsSupplier;
 
     address internal admin;
     address internal alice = makeAddr("alice");
@@ -38,11 +40,12 @@ contract RewardsStreamerMPTest is StakeMath, Test {
         (RewardsStreamerMP stakeManager, VaultFactory _vaultFactory, DeploymentConfig deploymentConfig) =
             deployment.run();
 
-        (address _deployer, address _stakingToken) = deploymentConfig.activeNetworkConfig();
+        (address _deployer, address _stakingToken, address _rewardsSupplier) = deploymentConfig.activeNetworkConfig();
 
         streamer = stakeManager;
         stakingToken = MockToken(_stakingToken);
         vaultFactory = _vaultFactory;
+        rewardsSupplier = Karma(_rewardsSupplier);
         admin = _deployer;
 
         address[4] memory accounts = [alice, bob, charlie, dave];

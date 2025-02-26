@@ -21,6 +21,10 @@ contract KarmaProviderMock is IRewardProvider {
         revert("Not implemented");
     }
 
+    function setReward(uint256, uint256) external pure override {
+        revert("Not implemented");
+    }
+
     function rewardsBalanceOfAccount(address account) external view override returns (uint256) {
         return userKarmaShare[account];
     }

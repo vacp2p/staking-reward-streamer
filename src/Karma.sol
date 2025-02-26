@@ -4,35 +4,57 @@ pragma solidity ^0.8.26;
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IRewardProvider } from "./interfaces/IRewardProvider.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract Karma is ERC20, Ownable2Step {
-    error Karma__MintAllowanceExceeded();
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     string public constant NAME = "Karma";
     string public constant SYMBOL = "KARMA";
 
-    IRewardProvider[] public rewardProviders;
+    uint256 allProvidersAllocatedSupply;
+
+    EnumerableSet.AddressSet private rewardProviders;
+    mapping(address => uint256) public rewardProviderAllocatedSupply;
 
     error Karma__TransfersNotAllowed();
-    error RewardProvider__IndexOutOfBounds();
+    error Karma__MintAllowanceExceeded();
+    error Karma__ProviderAlreadyAdded();
+    error Karma__UnknownProvider();
+
+    event RewardProviderAdded(address provider);
 
     constructor() ERC20(NAME, SYMBOL) Ownable(msg.sender) { }
 
-    function addRewardProvider(IRewardProvider provider) external onlyOwner {
-        rewardProviders.push(provider);
-    }
-
-    function removeRewardProvider(uint256 index) external onlyOwner {
-        if (index >= rewardProviders.length) {
-            revert RewardProvider__IndexOutOfBounds();
+    function addRewardProvider(address provider) external onlyOwner {
+        if (rewardProviders.contains(provider)) {
+            revert Karma__ProviderAlreadyAdded();
         }
 
-        rewardProviders[index] = rewardProviders[rewardProviders.length - 1];
-        rewardProviders.pop();
+        rewardProviders.add(address(provider));
+        emit RewardProviderAdded(provider);
     }
 
-    function getRewardProviders() external view returns (IRewardProvider[] memory) {
-        return rewardProviders;
+    function removeRewardProvider(address provider) external onlyOwner {
+        if (!rewardProviders.contains(provider)) {
+            revert Karma__UnknownProvider();
+        }
+
+        rewardProviders.remove(provider);
+    }
+
+    function setReward(address rewardsProvider, uint256 amount, uint256 duration) external onlyOwner {
+        if (!rewardProviders.contains(rewardsProvider)) {
+            revert Karma__UnknownProvider();
+        }
+
+        rewardProviderAllocatedSupply[rewardsProvider] = amount;
+        allProvidersAllocatedSupply += amount;
+        IRewardProvider(rewardsProvider).setReward(amount, duration);
+    }
+
+    function getRewardProviders() external view returns (address[] memory) {
+        return rewardProviders.values();
     }
 
     function _totalSupply() public view returns (uint256) {
@@ -68,8 +90,14 @@ contract Karma is ERC20, Ownable2Step {
     function _externalSupply() internal view returns (uint256) {
         uint256 externalSupply;
 
-        for (uint256 i = 0; i < rewardProviders.length; i++) {
-            externalSupply += rewardProviders[i].totalRewardsSupply();
+        for (uint256 i = 0; i < rewardProviders.length(); i++) {
+            IRewardProvider provider = IRewardProvider(rewardProviders.at(i));
+            uint256 supply = provider.totalRewardsSupply();
+            if (supply > rewardProviderAllocatedSupply[address(provider)]) {
+                supply = rewardProviderAllocatedSupply[address(provider)];
+            }
+
+            externalSupply += supply;
         }
 
         return externalSupply;
@@ -78,8 +106,8 @@ contract Karma is ERC20, Ownable2Step {
     function balanceOf(address account) public view override returns (uint256) {
         uint256 externalBalance;
 
-        for (uint256 i = 0; i < rewardProviders.length; i++) {
-            IRewardProvider provider = rewardProviders[i];
+        for (uint256 i = 0; i < rewardProviders.length(); i++) {
+            IRewardProvider provider = rewardProviders.at(i);
             externalBalance += provider.rewardsBalanceOfAccount(account);
         }
 

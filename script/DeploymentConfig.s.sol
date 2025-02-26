@@ -4,6 +4,7 @@ pragma solidity >=0.8.26 <=0.9.0;
 
 import { Script } from "forge-std/Script.sol";
 import { MockToken } from "../test/mocks/MockToken.sol";
+import { Karma } from "../src/Karma.sol";
 
 contract DeploymentConfig is Script {
     error DeploymentConfig_InvalidDeployerAddress();
@@ -12,6 +13,7 @@ contract DeploymentConfig is Script {
     struct NetworkConfig {
         address deployer;
         address stakingToken;
+        address rewardsSupplier;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -20,6 +22,7 @@ contract DeploymentConfig is Script {
 
     // solhint-disable-next-line var-name-mixedcase
     address internal SNT_ADDRESS_SEPOLIA = 0xE452027cdEF746c7Cd3DB31CB700428b16cD8E51;
+    address internal KARMA_ADDRESS_SEPOLIA = address(0);
 
     constructor(address _broadcaster) {
         if (_broadcaster == address(0)) revert DeploymentConfig_InvalidDeployerAddress();
@@ -35,11 +38,17 @@ contract DeploymentConfig is Script {
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
         MockToken stakingToken = new MockToken("Staking Token", "ST");
-        return NetworkConfig({ deployer: deployer, stakingToken: address(stakingToken) });
+        Karma karma = new Karma();
+        return
+            NetworkConfig({ deployer: deployer, stakingToken: address(stakingToken), rewardsSupplier: address(karma) });
     }
 
     function getSepoliaConfig() public view returns (NetworkConfig memory) {
-        return NetworkConfig({ deployer: deployer, stakingToken: SNT_ADDRESS_SEPOLIA });
+        return NetworkConfig({
+            deployer: deployer,
+            stakingToken: SNT_ADDRESS_SEPOLIA,
+            rewardsSupplier: SNT_ADDRESS_SEPOLIA
+        });
     }
 
     // This function is a hack to have it excluded by `forge coverage` until

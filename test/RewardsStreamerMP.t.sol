@@ -88,6 +88,15 @@ contract RewardsStreamerMPTest is StakeMath, Test {
         // assertEq(streamer.rewardIndex(), p.rewardIndex, "wrong reward index");
     }
 
+    function checkStreamer(string memory text, CheckStreamerParams memory p) public view {
+        assertEq(streamer.totalStaked(), p.totalStaked, string(abi.encodePacked(text, "wrong total staked")));
+        assertEq(streamer.totalMPStaked(), p.totalMPStaked, string(abi.encodePacked(text, "wrong total staked MP")));
+        assertEq(streamer.totalMPAccrued(), p.totalMPAccrued, string(abi.encodePacked(text, "wrong total accrued MP")));
+        assertEq(streamer.totalMaxMP(), p.totalMaxMP, string(abi.encodePacked(text, "wrong totalMaxMP MP")));
+        // assertEq(rewardToken.balanceOf(address(streamer)), p.rewardBalance, "wrong reward balance");
+        // assertEq(streamer.rewardIndex(), p.rewardIndex, "wrong reward index");
+    }
+
     struct CheckVaultParams {
         address account;
         uint256 rewardBalance;
@@ -114,6 +123,26 @@ contract RewardsStreamerMPTest is StakeMath, Test {
         assertEq(vaultData.rewardsAccrued, p.rewardsAccrued, "wrong account rewards accrued");
     }
 
+    function checkVault(string memory text, CheckVaultParams memory p) public view {
+        // assertEq(rewardToken.balanceOf(p.account), p.rewardBalance, "wrong account reward balance");
+
+        RewardsStreamerMP.VaultData memory vaultData = streamer.getVault(p.account);
+
+        assertEq(
+            vaultData.stakedBalance, p.stakedBalance, string(abi.encodePacked(text, "wrong account staked balance"))
+        );
+        assertEq(
+            stakingToken.balanceOf(p.account), p.vaultBalance, string(abi.encodePacked(text, "wrong vault balance"))
+        );
+        // assertEq(vaultData.accountRewardIndex, p.rewardIndex, "wrong account reward index");
+        assertEq(vaultData.mpStaked, p.mpStaked, string(abi.encodePacked(text, "wrong account MP staked")));
+        assertEq(vaultData.mpAccrued, p.mpAccrued, string(abi.encodePacked(text, "wrong account MP accrued")));
+        assertEq(vaultData.maxMP, p.maxMP, string(abi.encodePacked(text, "wrong account max MP")));
+        assertEq(
+            vaultData.rewardsAccrued, p.rewardsAccrued, string(abi.encodePacked(text, "wrong account rewards accrued"))
+        );
+    }
+
     struct CheckUserTotalsParams {
         address user;
         uint256 totalStakedBalance;
@@ -135,6 +164,15 @@ contract RewardsStreamerMPTest is StakeMath, Test {
     function _stake(address account, uint256 amount, uint256 lockupTime) public virtual {
         StakeVault vault = StakeVault(vaults[account]);
         vm.prank(account);
+        vault.stake(amount, lockupTime);
+    }
+
+    function _stake(address account, uint256 amount, uint256 lockupTime, bytes4 _expectedRevert) public virtual {
+        StakeVault vault = StakeVault(vaults[account]);
+        vm.prank(account);
+        if (_expectedRevert != bytes4(0)) {
+            vm.expectRevert(_expectedRevert);
+        }
         vault.stake(amount, lockupTime);
     }
 
@@ -2739,6 +2777,59 @@ contract CompoundTest is RewardsStreamerMPTest {
 }
 
 contract FuzzTests is RewardsStreamerMPTest {
+    bytes4 constant NO_REVERT = 0x00000000;
+
+    error FuzzTests__UndefinedError();
+
+    bytes4 expectedRevert = FuzzTests__UndefinedError.selector;
+    CheckStreamerParams expectedSystemState = CheckStreamerParams({
+        totalStaked: 0,
+        totalMPStaked: 0,
+        totalMPAccrued: 0,
+        totalMaxMP: 0,
+        stakingBalance: 0,
+        rewardBalance: 0,
+        rewardIndex: 0
+    });
+    mapping(address userAddress => CheckVaultParams params) public expectedAccountState;
+
+    function check(string memory text, CheckStreamerParams storage p) internal view {
+        assertEq(streamer.totalStaked(), p.totalStaked, string(abi.encodePacked(text, "wrong total staked")));
+        assertEq(streamer.totalMPStaked(), p.totalMPStaked, string(abi.encodePacked(text, "wrong total staked MP")));
+        assertEq(streamer.totalMPAccrued(), p.totalMPAccrued, string(abi.encodePacked(text, "wrong total accrued MP")));
+        assertEq(streamer.totalMaxMP(), p.totalMaxMP, string(abi.encodePacked(text, "wrong totalMaxMP MP")));
+        // assertEq(rewardToken.balanceOf(address(streamer)), p.rewardBalance, "wrong reward balance");
+        // assertEq(streamer.rewardIndex(), p.rewardIndex, "wrong reward index");
+    }
+
+    function check(string memory text, CheckVaultParams storage p) internal view {
+        // assertEq(rewardToken.balanceOf(p.account), p.rewardBalance, "wrong account reward balance");
+
+        RewardsStreamerMP.VaultData memory vaultData = streamer.getVault(p.account);
+
+        assertEq(
+            vaultData.stakedBalance, p.stakedBalance, string(abi.encodePacked(text, "wrong account staked balance"))
+        );
+        assertEq(
+            stakingToken.balanceOf(p.account), p.vaultBalance, string(abi.encodePacked(text, "wrong vault balance"))
+        );
+        // assertEq(vaultData.accountRewardIndex, p.rewardIndex, "wrong account reward index");
+        assertEq(vaultData.mpStaked, p.mpStaked, string(abi.encodePacked(text, "wrong account MP staked")));
+        assertEq(vaultData.mpAccrued, p.mpAccrued, string(abi.encodePacked(text, "wrong account MP accrued")));
+        assertEq(vaultData.maxMP, p.maxMP, string(abi.encodePacked(text, "wrong account max MP")));
+        assertEq(
+            vaultData.rewardsAccrued, p.rewardsAccrued, string(abi.encodePacked(text, "wrong account rewards accrued"))
+        );
+    }
+
+    function _stake(address account, uint256 amount, uint256 lockPeriod, bytes4 _expectedRevert) public override {
+        stakingToken.mint(account, amount);
+        vm.prank(account);
+        stakingToken.approve(vaults[account], amount);
+        super._stake(account, amount, lockPeriod, _expectedRevert);
+        expectedRevert = FuzzTests__UndefinedError.selector;
+    }
+
     function _stake(address account, uint256 amount, uint256 lockPeriod) public override {
         stakingToken.mint(account, amount);
         vm.prank(account);
@@ -2752,147 +2843,128 @@ contract FuzzTests is RewardsStreamerMPTest {
         vault.lock(lockPeriod);
     }
 
-    function testFuzz_Stake(uint256 stakeAmount, uint256 lockUpPeriod) public {
+    function _lock(address account, uint256 lockPeriod, bytes4 _expectedRevert) internal {
+        StakeVault vault = StakeVault(vaults[account]);
+        vm.prank(account);
+        if (_expectedRevert != bytes4(0)) {
+            vm.expectRevert(_expectedRevert);
+        }
+        vault.lock(lockPeriod);
+        expectedRevert = FuzzTests__UndefinedError.selector;
+    }
+
+    function _expectStake(address account, uint256 stakeAmount, uint256 lockUpPeriod) internal {
+        CheckVaultParams storage expectedAccountParams = expectedAccountState[account];
+        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
+        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+        expectedAccountParams.account = vaults[account];
+        expectedAccountParams.stakedBalance = stakeAmount;
+        expectedAccountParams.vaultBalance = stakeAmount;
+        expectedSystemState.stakingBalance += stakeAmount;
+        expectedSystemState.totalStaked += stakeAmount;
+        expectedAccountParams.mpStaked = stakeAmount + expectedBonusMP;
+        expectedSystemState.totalMPStaked += stakeAmount + expectedBonusMP;
+        expectedAccountParams.mpAccrued = stakeAmount + expectedBonusMP;
+        expectedSystemState.totalMPAccrued += stakeAmount + expectedBonusMP;
+        expectedAccountParams.maxMP = expectedMaxTotalMP;
+        expectedSystemState.totalMaxMP += expectedMaxTotalMP;
+    }
+
+    function _expectLock(address account, uint256 lockUpPeriod) internal {
+        CheckVaultParams storage expectedAccountParams = expectedAccountState[account];
+        uint256 additionalBonusMP = _bonusMP(expectedAccountParams.vaultBalance, lockUpPeriod);
+        expectedSystemState.totalMPStaked += additionalBonusMP;
+        expectedSystemState.totalMPAccrued += additionalBonusMP;
+        expectedSystemState.totalMaxMP += additionalBonusMP;
+        expectedAccountParams.mpStaked += additionalBonusMP;
+        expectedAccountParams.mpAccrued += additionalBonusMP;
+        expectedAccountParams.maxMP += additionalBonusMP;
+    }
+
+    function testFuzz_Stake(uint256 stakeAmount, uint64 lockUpPeriod) public {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
-        vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
-        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
-        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+        CheckVaultParams storage expectedAliceParams = expectedAccountState[alice];
+        if (lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD)) {
+            expectedRevert = NO_REVERT;
+            _expectStake(alice, stakeAmount, lockUpPeriod);
+        } else {
+            expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
+        }
 
-        _stake(alice, stakeAmount, lockUpPeriod);
+        _stake(alice, stakeAmount, lockUpPeriod, expectedRevert);
 
-        checkStreamer(
-            CheckStreamerParams({
-                totalStaked: stakeAmount,
-                totalMPStaked: stakeAmount + expectedBonusMP,
-                totalMPAccrued: stakeAmount + expectedBonusMP,
-                totalMaxMP: expectedMaxTotalMP,
-                stakingBalance: stakeAmount,
-                rewardBalance: 0,
-                rewardIndex: 0
-            })
-        );
-
-        checkVault(
-            CheckVaultParams({
-                account: vaults[alice],
-                rewardBalance: 0,
-                stakedBalance: stakeAmount,
-                vaultBalance: stakeAmount,
-                rewardIndex: 0,
-                mpStaked: stakeAmount + expectedBonusMP,
-                mpAccrued: stakeAmount + expectedBonusMP,
-                maxMP: expectedMaxTotalMP,
-                rewardsAccrued: 0
-            })
-        );
+        check("Stake: ", expectedSystemState);
+        check("Stake: ", expectedAliceParams);
     }
 
-    function testFuzz_Lock(uint256 stakeAmount, uint256 lockUpPeriod) public {
+    function testFuzz_Lock(uint256 stakeAmount, uint64 lockUpPeriod) public {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
-        vm.assume(lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD);
-        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
-        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+        CheckVaultParams storage expectedAliceParams = expectedAccountState[alice];
 
-        _stake(alice, stakeAmount, 0);
-        _lock(alice, lockUpPeriod);
+        expectedRevert = NO_REVERT;
 
-        checkStreamer(
-            CheckStreamerParams({
-                totalStaked: stakeAmount,
-                totalMPStaked: stakeAmount + expectedBonusMP,
-                totalMPAccrued: stakeAmount + expectedBonusMP,
-                totalMaxMP: expectedMaxTotalMP,
-                stakingBalance: stakeAmount,
-                rewardBalance: 0,
-                rewardIndex: 0
-            })
-        );
+        _expectStake(alice, stakeAmount, 0);
+        _stake(alice, stakeAmount, 0, expectedRevert);
 
-        checkVault(
-            CheckVaultParams({
-                account: vaults[alice],
-                rewardBalance: 0,
-                stakedBalance: stakeAmount,
-                vaultBalance: stakeAmount,
-                rewardIndex: 0,
-                mpStaked: stakeAmount + expectedBonusMP,
-                mpAccrued: stakeAmount + expectedBonusMP,
-                maxMP: expectedMaxTotalMP,
-                rewardsAccrued: 0
-            })
-        );
+        if (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD) {
+            expectedRevert = NO_REVERT;
+            _expectLock(alice, lockUpPeriod);
+        } else {
+            if (lockUpPeriod == 0) {
+                expectedRevert = IStakeManager.StakingManager__DurationCannotBeZero.selector;
+            } else {
+                expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
+            }
+        }
+        _lock(alice, lockUpPeriod, expectedRevert);
+
+        check("Lock: ", expectedSystemState);
+        check("Lock: ", expectedAliceParams);
     }
 
-    function testFuzz_Relock(uint256 stakeAmount, uint256 lockUpPeriod, uint256 lockUpPeriod2) public {
-        stakeAmount = bound(stakeAmount, 1, MAX_BALANCE);
-        lockUpPeriod = lockUpPeriod == 0 ? 0 : bound(lockUpPeriod, MIN_LOCKUP_PERIOD, MAX_LOCKUP_PERIOD);
-        vm.assume(
-            lockUpPeriod2 > 0 && lockUpPeriod2 <= MAX_LOCKUP_PERIOD && lockUpPeriod + lockUpPeriod2 >= MIN_LOCKUP_PERIOD
-                && lockUpPeriod + lockUpPeriod2 <= MAX_LOCKUP_PERIOD
-        );
-        uint256 expectedBonusMP = _bonusMP(stakeAmount, lockUpPeriod);
-        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
+    function testFuzz_Relock(uint256 stakeAmount, uint64 lockUpPeriod, uint64 lockUpPeriod2) public {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        CheckVaultParams storage expectedAliceParams = expectedAccountState[alice];
+        if (lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD)) {
+            expectedRevert = NO_REVERT;
+            _expectStake(alice, stakeAmount, lockUpPeriod);
+        } else {
+            expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
+        }
 
-        _stake(alice, stakeAmount, lockUpPeriod);
-
-        checkStreamer(
-            CheckStreamerParams({
-                totalStaked: stakeAmount,
-                totalMPStaked: stakeAmount + expectedBonusMP,
-                totalMPAccrued: stakeAmount + expectedBonusMP,
-                totalMaxMP: expectedMaxTotalMP,
-                stakingBalance: stakeAmount,
-                rewardBalance: 0,
-                rewardIndex: 0
-            })
-        );
-
-        checkVault(
-            CheckVaultParams({
-                account: vaults[alice],
-                rewardBalance: 0,
-                stakedBalance: stakeAmount,
-                vaultBalance: stakeAmount,
-                rewardIndex: 0,
-                mpStaked: stakeAmount + expectedBonusMP,
-                mpAccrued: stakeAmount + expectedBonusMP,
-                maxMP: expectedMaxTotalMP,
-                rewardsAccrued: 0
-            })
-        );
-
-        _lock(alice, lockUpPeriod2);
-        expectedBonusMP += _bonusMP(stakeAmount, lockUpPeriod2);
-        expectedMaxTotalMP += _bonusMP(stakeAmount, lockUpPeriod2);
-
-        checkStreamer(
-            CheckStreamerParams({
-                totalStaked: stakeAmount,
-                totalMPStaked: stakeAmount + expectedBonusMP,
-                totalMPAccrued: stakeAmount + expectedBonusMP,
-                totalMaxMP: expectedMaxTotalMP,
-                stakingBalance: stakeAmount,
-                rewardBalance: 0,
-                rewardIndex: 0
-            })
-        );
-
-        checkVault(
-            CheckVaultParams({
-                account: vaults[alice],
-                rewardBalance: 0,
-                stakedBalance: stakeAmount,
-                vaultBalance: stakeAmount,
-                rewardIndex: 0,
-                mpStaked: stakeAmount + expectedBonusMP,
-                mpAccrued: stakeAmount + expectedBonusMP,
-                maxMP: expectedMaxTotalMP,
-                rewardsAccrued: 0
-            })
-        );
+        _stake(alice, stakeAmount, lockUpPeriod, expectedRevert);
+        expectedRevert = NO_REVERT;
+        check("Stake: ", expectedSystemState);
+        check("Stake: ", expectedAliceParams);
+        if (lockUpPeriod2 == 0) {
+            expectedRevert = IStakeManager.StakingManager__DurationCannotBeZero.selector;
+        } else {
+            if (expectedAliceParams.vaultBalance == 0) {
+                expectedRevert = StakeMath.StakeMath__InsufficientBalance.selector;
+            } else {
+                if (
+                    lockUpPeriod2 <= MAX_LOCKUP_PERIOD && lockUpPeriod + lockUpPeriod2 >= MIN_LOCKUP_PERIOD
+                        && lockUpPeriod + lockUpPeriod2 <= MAX_LOCKUP_PERIOD
+                ) {
+                    expectedRevert = NO_REVERT;
+                    uint256 additionalBonusMP = _bonusMP(stakeAmount, lockUpPeriod2);
+                    expectedSystemState.totalMPStaked += additionalBonusMP;
+                    expectedSystemState.totalMPAccrued += additionalBonusMP;
+                    expectedSystemState.totalMaxMP += additionalBonusMP;
+                    expectedAliceParams.mpStaked += additionalBonusMP;
+                    expectedAliceParams.mpAccrued += additionalBonusMP;
+                    expectedAliceParams.maxMP += additionalBonusMP;
+                } else {
+                    expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
+                }
+            }
+        }
+        _lock(alice, lockUpPeriod2, expectedRevert);
+        check("Lock: ", expectedSystemState);
+        check("Lock: ", expectedAliceParams);
     }
 
-    function testFuzz_AccrueMP(uint256 stakeAmount, uint256 lockUpPeriod, uint16 accruedTime) public {
+    function testFuzz_AccrueMP(uint128 stakeAmount, uint64 lockUpPeriod, uint64 accruedTime) public {
         vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
         vm.assume(lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD));
         uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
@@ -2932,62 +3004,85 @@ contract FuzzTests is RewardsStreamerMPTest {
             })
         );
     }
+    /**
+     * uint256 public constant MIN_LOCKUP_PERIOD = 90 days; //7776000 seconds
+     * uint256 public constant MAX_LOCKUP_PERIOD = MAX_MULTIPLIER * YEAR; // 126230400 seconds
+     */
 
-    function testFuzz_AccrueMP_Relock(uint256 stakeAmount, uint256 lockUpPeriod2, uint16 accruedTime) public {
-        uint256 lockUpPeriod = MIN_LOCKUP_PERIOD;
-        vm.assume(lockUpPeriod2 <= MAX_LOCKUP_PERIOD);
-        if (accruedTime <= lockUpPeriod) {
-            vm.assume(
-                lockUpPeriod2 > 0 && lockUpPeriod + lockUpPeriod2 - accruedTime >= MIN_LOCKUP_PERIOD
-                    && lockUpPeriod + lockUpPeriod2 - accruedTime <= MAX_LOCKUP_PERIOD
-            );
+    function testFuzz_AccrueMP_Relock(
+        uint128 stakeAmount,
+        uint64 lockUpPeriod,
+        uint64 lockUpPeriod2,
+        uint64 accruedTime
+    )
+        public
+    {
+        vm.assume(stakeAmount > 0 && stakeAmount <= MAX_BALANCE);
+        CheckVaultParams storage expectedAliceParams = expectedAccountState[alice];
+        if (lockUpPeriod == 0 || (lockUpPeriod >= MIN_LOCKUP_PERIOD && lockUpPeriod <= MAX_LOCKUP_PERIOD)) {
+            expectedRevert = NO_REVERT;
+            _expectStake(alice, stakeAmount, lockUpPeriod);
         } else {
-            vm.assume(lockUpPeriod2 >= MIN_LOCKUP_PERIOD);
+            expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
         }
-        stakeAmount = bound(stakeAmount, MIN_BALANCE, MAX_BALANCE);
-        uint256 expectedMaxTotalMP = _maxTotalMP(stakeAmount, lockUpPeriod);
-        uint256 expectedStakedMP = _initialMP(stakeAmount) + _bonusMP(stakeAmount, lockUpPeriod);
-        uint256 rawTotalMP = expectedStakedMP + _accrueMP(stakeAmount, accruedTime);
-        uint256 expectedTotalMP = Math.min(rawTotalMP, expectedMaxTotalMP);
 
-        _stake(alice, stakeAmount, lockUpPeriod);
+        _stake(alice, stakeAmount, lockUpPeriod, expectedRevert);
+        check("Stake: ", expectedSystemState);
+        check("Stake: ", expectedAliceParams);
 
-        uint256 currentTime = vm.getBlockTimestamp();
-        vm.warp(currentTime + accruedTime);
-        _lock(alice, lockUpPeriod2);
-        expectedTotalMP += _bonusMP(stakeAmount, lockUpPeriod2);
-        expectedStakedMP += _bonusMP(stakeAmount, lockUpPeriod2);
-        expectedMaxTotalMP += _bonusMP(stakeAmount, lockUpPeriod2);
-        checkStreamer(
-            CheckStreamerParams({
-                totalStaked: stakeAmount,
-                totalMPStaked: expectedStakedMP,
-                totalMPAccrued: expectedTotalMP,
-                totalMaxMP: expectedMaxTotalMP,
-                stakingBalance: stakeAmount,
-                rewardBalance: 0,
-                rewardIndex: 0
-            })
-        );
+        if (expectedAliceParams.vaultBalance > 0) {
+            uint256 rawAccruedMP = _accrueMP(stakeAmount, accruedTime);
+            expectedAliceParams.mpAccrued =
+                Math.min(expectedAliceParams.mpAccrued + rawAccruedMP, expectedAliceParams.maxMP);
+            expectedSystemState.totalMPAccrued =
+                Math.min(expectedSystemState.totalMPAccrued + rawAccruedMP, expectedSystemState.totalMaxMP);
+        }
 
-        checkVault(
-            CheckVaultParams({
-                account: vaults[alice],
-                rewardBalance: 0,
-                stakedBalance: stakeAmount,
-                vaultBalance: stakeAmount,
-                rewardIndex: 0,
-                mpStaked: expectedStakedMP,
-                mpAccrued: expectedTotalMP,
-                maxMP: expectedMaxTotalMP,
-                rewardsAccrued: 0
-            })
-        );
+        vm.warp(vm.getBlockTimestamp() + accruedTime);
+
+        streamer.updateGlobalState();
+        streamer.updateVaultMP(vaults[alice]);
+
+        check("Accrue: ", expectedSystemState);
+        check("Accrue: ", expectedAliceParams);
+
+        if (lockUpPeriod2 == 0) {
+            expectedRevert = IStakeManager.StakingManager__DurationCannotBeZero.selector;
+        } else {
+            if (expectedAliceParams.vaultBalance == 0) {
+                expectedRevert = StakeMath.StakeMath__InsufficientBalance.selector;
+            } else if (lockUpPeriod2 > MAX_LOCKUP_PERIOD) {
+                expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
+            } else {
+                uint256 dt_lock =
+                    (accruedTime <= lockUpPeriod) ? (lockUpPeriod - accruedTime) + lockUpPeriod2 : lockUpPeriod2;
+                if (dt_lock >= MIN_LOCKUP_PERIOD && dt_lock <= MAX_LOCKUP_PERIOD) {
+                    if (lockUpPeriod + lockUpPeriod2 > MAX_LOCKUP_PERIOD) {
+                        //expectedRevert = FuzzTests.FuzzTests__UndefinedError.selector;
+                        expectedRevert = StakeMath.StakeMath__AbsoluteMaxMPOverflow.selector;
+                    } else {
+                        expectedRevert = NO_REVERT;
+                        uint256 additionalBonusMP = _bonusMP(stakeAmount, lockUpPeriod2);
+                        expectedSystemState.totalMPStaked += additionalBonusMP;
+                        expectedSystemState.totalMPAccrued += additionalBonusMP;
+                        expectedSystemState.totalMaxMP += additionalBonusMP;
+                        expectedAliceParams.mpStaked += additionalBonusMP;
+                        expectedAliceParams.mpAccrued += additionalBonusMP;
+                        expectedAliceParams.maxMP += additionalBonusMP;
+                    }
+                } else {
+                    expectedRevert = StakeMath.StakeMath__InvalidLockingPeriod.selector;
+                }
+            }
+        }
+        _lock(alice, lockUpPeriod2, expectedRevert);
+        check("Lock: ", expectedSystemState);
+        check("Lock: ", expectedAliceParams);
     }
 
     function testFuzz_Unstake(
         uint256 stakeAmount,
-        uint256 lockUpPeriod,
+        uint64 lockUpPeriod,
         uint16 accruedTime,
         uint256 unstakeAmount
     )

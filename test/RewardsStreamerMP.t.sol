@@ -7,7 +7,6 @@ import { DeployKarmaScript } from "../script/DeployKarma.s.sol";
 import { DeployRewardsStreamerMPScript } from "../script/DeployRewardsStreamerMP.s.sol";
 import { UpgradeRewardsStreamerMPScript } from "../script/UpgradeRewardsStreamerMP.s.sol";
 import { DeploymentConfig } from "../script/DeploymentConfig.s.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 import { IStakeManager } from "../src/interfaces/IStakeManager.sol";
@@ -101,13 +100,10 @@ contract RewardsStreamerMPTest is StakeMath, Test {
     }
 
     function checkVault(CheckVaultParams memory p) public view {
-        // assertEq(rewardToken.balanceOf(p.account), p.rewardBalance, "wrong account reward balance");
-
         RewardsStreamerMP.VaultData memory vaultData = streamer.getVault(p.account);
 
         assertEq(vaultData.stakedBalance, p.stakedBalance, "wrong account staked balance");
         assertEq(stakingToken.balanceOf(p.account), p.vaultBalance, "wrong vault balance");
-        // assertEq(vaultData.accountRewardIndex, p.rewardIndex, "wrong account reward index");
         assertEq(vaultData.mpStaked, p.mpStaked, "wrong account MP staked");
         assertEq(vaultData.mpAccrued, p.mpAccrued, "wrong account MP accrued");
         assertEq(vaultData.maxMP, p.maxMP, "wrong account max MP");
@@ -957,6 +953,61 @@ contract StakeTest is RewardsStreamerMPTest {
                 rewardIndex: 0
             })
         );
+    }
+
+    function test_StakeMultipleTimesWithLockIncrease() public {
+        uint256 stakeAmount = 10e18;
+        uint256 expectedStake = stakeAmount;
+        uint256 expectedBonus = _bonusMP(stakeAmount, YEAR);
+        uint256 expectedMP = stakeAmount;
+        uint256 expectedMaxMP = expectedMP + expectedBonus + (stakeAmount * streamer.MAX_MULTIPLIER());
+
+        // Alice stakes 10 tokens, locks for 1 year
+        _stake(alice, stakeAmount, YEAR);
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: expectedStake,
+                totalMPStaked: expectedMP + expectedBonus,
+                totalMPAccrued: expectedMP + expectedBonus,
+                totalMaxMP: expectedMaxMP,
+                stakingBalance: stakeAmount,
+                rewardBalance: 0,
+                rewardIndex: 0
+            })
+        );
+
+        // Alice stakes again 10 tokens and increases lock by 3 years
+        // Since time hasn't passed yet, we essentially have a total lock up
+        // of 4 years
+        uint256 lockUpIncrease = 3 * YEAR;
+
+        // new bonus = old bonus + bonus increase for old stake + bonus for new stake + bonus for new stake
+        expectedBonus = expectedBonus + _bonusMP(stakeAmount, lockUpIncrease) + _bonusMP(stakeAmount, lockUpIncrease)
+        // This is the bonus for the new stake on the previous lock up
+        + _bonusMP(stakeAmount, YEAR);
+        expectedMP = expectedMP + stakeAmount;
+        expectedMaxMP = expectedMP + expectedBonus + ((stakeAmount * 2) * streamer.MAX_MULTIPLIER());
+
+        _stake(alice, stakeAmount, lockUpIncrease);
+
+        expectedStake = expectedStake + stakeAmount;
+
+        checkStreamer(
+            CheckStreamerParams({
+                totalStaked: expectedStake,
+                totalMPStaked: expectedMP + expectedBonus,
+                totalMPAccrued: expectedMP + expectedBonus,
+                totalMaxMP: expectedMaxMP,
+                stakingBalance: expectedStake,
+                rewardBalance: 0,
+                rewardIndex: 0
+            })
+        );
+
+        // any lock up beyond the max lock up period should revert
+        vm.expectRevert(StakeMath.StakeMath__InvalidLockingPeriod.selector);
+        _stake(alice, 1, 1);
     }
 
     function test_StakeMultipleAccounts() public {

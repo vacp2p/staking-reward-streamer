@@ -186,9 +186,7 @@ contract RewardsStreamerMP is
         _updateVault(msg.sender, true);
 
         VaultData storage vault = vaultData[msg.sender];
-        if (vault.lockUntil != 0 && vault.lockUntil > block.timestamp) {
-            revert StakingManager__CannotRestakeWithLockedFunds();
-        }
+
         (uint256 _deltaMpTotal, uint256 _deltaMPMax, uint256 _newLockEnd) =
             _calculateStake(vault.stakedBalance, vault.maxMP, vault.lockUntil, block.timestamp, amount, lockPeriod);
 

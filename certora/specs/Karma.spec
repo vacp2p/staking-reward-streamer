@@ -3,7 +3,10 @@ using Karma as karma;
 methods {
     function owner() external returns (address) envfree;
     function totalDistributorAllocation() external returns (uint256) envfree;
+    function totalSupply() external returns (uint256) envfree;
     function _.setReward(uint256, uint256) external => HAVOC_ECF;
+    function streamer.totalRewardsSupply() external => NONDET;
+    function _.sighash() external => NONDET;
 }
 
 persistent ghost mathint sumOfDistributorAllocations {
@@ -18,6 +21,14 @@ invariant totalDistributorAllocationIsSumOfDistributorAllocations()
     to_mathint(totalDistributorAllocation()) == sumOfDistributorAllocations
     filtered {
         f -> !isUpgradeFunction(f)
+    }
+
+invariant totalSupplyIsGreaterEqualTotalDistributorAllocation()
+    totalSupply() >= totalDistributorAllocation()
+    {
+        preserved {
+            requireInvariant totalDistributorAllocationIsSumOfDistributorAllocations();
+        }
     }
 
 // TODO:

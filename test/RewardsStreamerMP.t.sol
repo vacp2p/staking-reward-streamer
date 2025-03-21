@@ -2027,6 +2027,19 @@ contract LockTest is RewardsStreamerMPTest {
         _lock(alice, YEAR);
     }
 
+    function test_LockIncreaseCanBeLowerThanMinLockUpPeriod() public {
+        uint256 stakeAmount = 10e18;
+
+        // stake and lock for 1 year
+        _stake(alice, stakeAmount, 90 days);
+
+        // wait until lock period is *almost* over
+        vm.warp(vm.getBlockTimestamp() + 11 days);
+
+        // increase lock by 10 days
+        _stake(alice, 1e18, 10 days);
+    }
+
     function test_LockFailsWithNoStake() public {
         vm.expectRevert(StakeMath.StakeMath__InsufficientBalance.selector);
         _lock(alice, YEAR);

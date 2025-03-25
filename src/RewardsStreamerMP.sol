@@ -422,6 +422,7 @@ contract RewardsStreamerMP is
 
     function _updateVault(address vaultAddress, bool forceMPUpdate) internal {
         VaultData storage vault = vaultData[vaultAddress];
+        uint256 rewardsAccrued = _vaultPendingRewards(vault);
         uint256 accruedMP = _getVaultPendingMP(vault);
         if (accruedMP > 0 || forceMPUpdate) {
             vault.mpAccrued += accruedMP;
@@ -429,7 +430,6 @@ contract RewardsStreamerMP is
             totalMPStaked += accruedMP;
         }
 
-        uint256 rewardsAccrued = _vaultPendingRewards(vault);
         vault.rewardsAccrued += rewardsAccrued;
         vault.rewardIndex = rewardIndex;
 

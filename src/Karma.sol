@@ -37,6 +37,9 @@ contract Karma is Initializable, ERC20Upgradeable, Ownable2StepUpgradeable, UUPS
     EnumerableSet.AddressSet private rewardDistributors;
     /// @notice Mapping of reward distributor to allocation
     mapping(address distributor => uint256 allocation) public rewardDistributorAllocations;
+    /// @notice Gap for upgrade safety.
+    // solhint-disable-next-line
+    uint256[30] private __gap_Karma;
 
     /*//////////////////////////////////////////////////////////////////////////
                                      CONSTRUCTOR
@@ -66,13 +69,8 @@ contract Karma is Initializable, ERC20Upgradeable, Ownable2StepUpgradeable, UUPS
      * @dev Emits a `RewardDistributorAdded` event when a distributor is added.
      * @param distributor The address of the reward distributor.
      */
-    function addRewardDistributor(address distributor) external onlyOwner {
-        if (rewardDistributors.contains(distributor)) {
-            revert Karma__DistributorAlreadyAdded();
-        }
-
-        rewardDistributors.add(address(distributor));
-        emit RewardDistributorAdded(distributor);
+    function addRewardDistributor(address distributor) public virtual onlyOwner {
+        _addRewardDistributor(distributor);
     }
 
     /**
@@ -80,12 +78,8 @@ contract Karma is Initializable, ERC20Upgradeable, Ownable2StepUpgradeable, UUPS
      * @dev Only the owner can remove a reward distributor.
      * @param distributor The address of the reward distributor.
      */
-    function removeRewardDistributor(address distributor) external onlyOwner {
-        if (!rewardDistributors.contains(distributor)) {
-            revert Karma__UnknownDistributor();
-        }
-
-        rewardDistributors.remove(distributor);
+    function removeRewardDistributor(address distributor) public virtual onlyOwner {
+        _removeRewardDistributor(distributor);
     }
 
     /**
@@ -96,14 +90,8 @@ contract Karma is Initializable, ERC20Upgradeable, Ownable2StepUpgradeable, UUPS
      * @param amount The amount of rewards to set.
      * @param duration The duration of the rewards.
      */
-    function setReward(address rewardsDistributor, uint256 amount, uint256 duration) external onlyOwner {
-        if (!rewardDistributors.contains(rewardsDistributor)) {
-            revert Karma__UnknownDistributor();
-        }
-
-        rewardDistributorAllocations[rewardsDistributor] += amount;
-        totalDistributorAllocation += amount;
-        IRewardDistributor(rewardsDistributor).setReward(amount, duration);
+    function setReward(address rewardsDistributor, uint256 amount, uint256 duration) public virtual onlyOwner {
+        _setReward(rewardsDistributor, amount, duration);
     }
 
     /**
@@ -113,7 +101,7 @@ contract Karma is Initializable, ERC20Upgradeable, Ownable2StepUpgradeable, UUPS
      * @param account The account to mint tokens to.
      * @param amount The amount of tokens to mint.
      */
-    function mint(address account, uint256 amount) external onlyOwner {
+    function mint(address account, uint256 amount) public virtual onlyOwner {
         _mint(account, amount);
     }
 
@@ -162,8 +150,45 @@ contract Karma is Initializable, ERC20Upgradeable, Ownable2StepUpgradeable, UUPS
      * @notice Authorizes contract upgrades via UUPS.
      * @dev This function is only callable by the owner.
      */
-    function _authorizeUpgrade(address) internal view override {
+    function _authorizeUpgrade(address) internal view virtual override {
         _checkOwner();
+    }
+
+    /**
+     * @notice Adds a reward distributor to the set of reward distributors.
+     * @param distributor The address of the reward distributor.
+     */
+    function _addRewardDistributor(address distributor) internal virtual {
+        if (rewardDistributors.contains(distributor)) {
+            revert Karma__DistributorAlreadyAdded();
+        }
+
+        rewardDistributors.add(distributor);
+        emit RewardDistributorAdded(distributor);
+    }
+
+    /**
+     * @notice Removes a reward distributor from the set of reward distributors.
+     * @param distributor The address of the reward distributor.
+     */
+    function _removeRewardDistributor(address distributor) internal virtual {
+        if (!rewardDistributors.contains(distributor)) {
+            revert Karma__UnknownDistributor();
+        }
+        rewardDistributors.remove(distributor);
+    }
+
+    /**
+     * @notice Sets the reward for a reward distributor.
+     */
+    function _setReward(address rewardsDistributor, uint256 amount, uint256 duration) internal virtual {
+        if (!rewardDistributors.contains(rewardsDistributor)) {
+            revert Karma__UnknownDistributor();
+        }
+
+        rewardDistributorAllocations[rewardsDistributor] += amount;
+        totalDistributorAllocation += amount;
+        IRewardDistributor(rewardsDistributor).setReward(amount, duration);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

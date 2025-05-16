@@ -341,3 +341,92 @@ contract OverflowTest is KarmaTest {
         karma.setReward(address(distributor1), 1e18, 1000);
     }
 }
+
+contract SlashTest is KarmaTest {
+    address public slasher = makeAddr("slasher");
+
+    function _mintKarmaToAccount(address account, uint256 amount) internal {
+        vm.startPrank(owner);
+        karma.mint(account, amount);
+        vm.stopPrank();
+    }
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(owner);
+        karma.grantRole(karma.SLASHER_ROLE(), slasher);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_SenderIsNotDefaultAdminOrSlasher() public {
+        vm.prank(makeAddr("someone"));
+        vm.expectRevert(Karma.Karma__Unauthorized.selector);
+        karma.slash(alice);
+    }
+
+    function test_RevertWhen_SlashCooldownIsActive() public {
+        _mintKarmaToAccount(alice, 1000e18);
+
+        vm.prank(slasher);
+        karma.slash(alice);
+
+        vm.prank(slasher);
+        vm.expectRevert(Karma.Karma__SlashCooldownActive.selector);
+        karma.slash(alice);
+
+        // once slash cooldown has passed, slashing should be fine again
+        vm.warp(block.timestamp + karma.slashCooldown());
+        vm.prank(slasher);
+        karma.slash(alice);
+    }
+
+    function test_RevertWhen_KarmaBalanceIsInvalid() public {
+        vm.prank(slasher);
+        vm.expectRevert(Karma.Karma__CannotSlashZeroBalance.selector);
+        karma.slash(alice);
+    }
+
+    function test_SlashRemainingBalanceIfBalanceIsLow() public {
+        _mintKarmaToAccount(alice, karma.MIN_SLASH_AMOUNT() - 1);
+
+        vm.prank(slasher);
+        karma.slash(alice);
+
+        assertEq(karma.balanceOf(alice), 0);
+    }
+
+    function test_Slash() public {
+        uint256 currentBalance = 100 ether;
+        _mintKarmaToAccount(alice, currentBalance);
+        uint256 slashedAmount = karma.calculateSlashAmount(alice);
+
+        vm.prank(slasher);
+        karma.slash(alice);
+
+        assertEq(karma.balanceOf(alice), currentBalance - slashedAmount);
+
+        currentBalance = karma.balanceOf(alice);
+        slashedAmount = karma.calculateSlashAmount(alice);
+
+        // wait for cooldown period to be expired
+        vm.warp(block.timestamp + karma.slashCooldown());
+
+        vm.prank(slasher);
+        karma.slash(alice);
+
+        assertEq(karma.balanceOf(alice), currentBalance - slashedAmount);
+    }
+
+    function testFuzz_Slash(uint256 rewardsAmount) public {
+        vm.assume(rewardsAmount > 0);
+        _mintKarmaToAccount(alice, rewardsAmount);
+
+        uint256 slashedAmount = karma.calculateSlashAmount(alice);
+
+        vm.prank(slasher);
+        karma.slash(alice);
+
+        assertEq(karma.balanceOf(alice), rewardsAmount - slashedAmount);
+    }
+}

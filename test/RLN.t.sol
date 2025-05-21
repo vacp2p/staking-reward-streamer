@@ -6,11 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "forge-std/Test.sol";
 
 import "../src/rln/RLN.sol";
-import {IVerifier} from "../src/rln/IVerifier.sol";
+import { IVerifier } from "../src/rln/IVerifier.sol";
 
 // A ERC20 token contract which allows arbitrary minting for testing
 contract TestERC20 is ERC20 {
-    constructor() ERC20("TestERC20", "TST") {}
+    constructor() ERC20("TestERC20", "TST") { }
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
@@ -25,7 +25,12 @@ contract MockVerifier is IVerifier {
         result = true;
     }
 
-    function verifyProof(uint256[2] memory, uint256[2][2] memory, uint256[2] memory, uint256[2] memory)
+    function verifyProof(
+        uint256[2] memory,
+        uint256[2][2] memory,
+        uint256[2] memory,
+        uint256[2] memory
+    )
         external
         view
         returns (bool)
@@ -47,7 +52,7 @@ contract RLNTest is Test {
     TestERC20 token;
     MockVerifier verifier;
 
-    uint256 rlnInitialTokenBalance = 1000000;
+    uint256 rlnInitialTokenBalance = 1_000_000;
     uint256 minimalDeposit = 100;
     uint256 maximalRate = 1 << 16 - 1;
     uint256 depth = 20;
@@ -109,14 +114,7 @@ contract RLNTest is Test {
         uint256 smallDepth = 1;
         TestERC20 _token = new TestERC20();
         RLN smallRLN = new RLN(
-            minimalDeposit,
-            maximalRate,
-            smallDepth,
-            feePercentage,
-            feeReceiver,
-            0,
-            address(_token),
-            address(verifier)
+            minimalDeposit, maximalRate, smallDepth, feePercentage, feeReceiver, 0, address(_token), address(verifier)
         );
 
         // Register the first user

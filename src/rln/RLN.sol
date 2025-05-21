@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IVerifier} from "./IVerifier.sol";
+import { IVerifier } from "./IVerifier.sol";
 
 /// @title Rate-Limiting Nullifier registry contract
 /// @dev This contract allows you to register RLN commitment and withdraw/slash.
@@ -190,7 +190,11 @@ contract RLN {
     }
 
     /// @dev Groth16 proof verification
-    function _verifyProof(uint256 identityCommitment, address receiver, uint256[8] calldata proof)
+    function _verifyProof(
+        uint256 identityCommitment,
+        address receiver,
+        uint256[8] calldata proof
+    )
         internal
         view
         returns (bool)

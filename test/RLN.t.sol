@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "forge-std/Test.sol";
 
-import "../src/RLN.sol";
-import {IVerifier} from "../src/IVerifier.sol";
+import "../src/rln/RLN.sol";
+import {IVerifier} from "../src/rln/IVerifier.sol";
 
 // A ERC20 token contract which allows arbitrary minting for testing
 contract TestERC20 is ERC20 {

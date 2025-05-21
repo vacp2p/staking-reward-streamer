@@ -2,8 +2,8 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Script.sol";
-import "../src/RLN.sol";
-import "../src/Verifier.sol";
+import "../src/rln/RLN.sol";
+import "../src/rln/Verifier.sol";
 
 contract RLNScript is Script {
     function run() public {

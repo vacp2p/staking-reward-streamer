@@ -2,13 +2,15 @@
 pragma solidity 0.8.26;
 
 import "../Karma.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IVerifier } from "./IVerifier.sol";
 
 /// @title Rate-Limiting Nullifier registry contract
 /// @dev This contract allows you to register RLN commitment and withdraw/slash.
-contract KarmaRLN is AccessControl {
+contract KarmaRLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
     bytes32 public constant REGISTER_ROLE = keccak256("REGISTER_ROLE");
 
@@ -19,11 +21,8 @@ contract KarmaRLN is AccessControl {
         uint256 index;
     }
 
-    /// @dev Maximal rate.
-    uint256 public immutable TIER_SIZE;
-
     /// @dev Registry set size (1 << DEPTH).
-    uint256 public immutable SET_SIZE;
+    uint256 public SET_SIZE;
 
     /// @dev Current index where identityCommitment will be stored.
     uint256 public identityCommitmentIndex;
@@ -33,10 +32,10 @@ contract KarmaRLN is AccessControl {
     mapping(uint256 => User) public members;
 
     /// @dev Karma Token used for registering.
-    Karma public immutable karma;
+    Karma public karma;
 
     /// @dev Groth16 verifier.
-    IVerifier public immutable verifier;
+    IVerifier public verifier;
 
     /// @dev Emmited when a new member registered.
     /// @param identityCommitment: `identityCommitment`;
@@ -52,6 +51,10 @@ contract KarmaRLN is AccessControl {
     /// @param slasher: address of slasher (msg.sender).
     event MemberSlashed(uint256 index, address slasher);
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @dev Constructor.
     /// @param _owner: address of the owner of the contract;
     /// @param _slasher: address of the slasher;
@@ -59,7 +62,19 @@ contract KarmaRLN is AccessControl {
     /// @param depth: depth of the merkle tree;
     /// @param _token: address of the ERC20 contract;
     /// @param _verifier: address of the Groth16 Verifier.
-    constructor(address _owner, address _slasher, address _register, uint256 depth, address _verifier, address _token) {
+    function initialize(
+        address _owner,
+        address _slasher,
+        address _register,
+        uint256 depth,
+        address _verifier,
+        address _token
+    )
+        public
+        initializer
+    {
+        __UUPSUpgradeable_init();
+        __AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(SLASHER_ROLE, _slasher);
         _setupRole(REGISTER_ROLE, _register);
@@ -67,6 +82,14 @@ contract KarmaRLN is AccessControl {
 
         karma = Karma(_token);
         verifier = IVerifier(_verifier);
+    }
+
+    /**
+     * @notice Authorizes contract upgrades via UUPS.
+     * @dev This function is only callable by the owner.
+     */
+    function _authorizeUpgrade(address) internal view override {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "RLN, _authorizeUpgrade: caller is not the owner");
     }
 
     /// @dev Adds `identityCommitment` to the registry set and takes the necessary stake amount.

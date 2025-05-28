@@ -2,11 +2,16 @@
 pragma solidity 0.8.26;
 
 import "../Karma.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+
 import { IVerifier } from "./IVerifier.sol";
 
 /// @title Rate-Limiting Nullifier registry contract
 /// @dev This contract allows you to register RLN commitment and withdraw/slash.
-contract KarmaRLN {
+contract KarmaRLN is AccessControl {
+    bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
+    bytes32 public constant REGISTER_ROLE = keccak256("REGISTER_ROLE");
+
     /// @dev User metadata struct.
     /// @param userAddress: address of depositor;
     struct User {
@@ -47,10 +52,17 @@ contract KarmaRLN {
     /// @param slasher: address of slasher (msg.sender).
     event MemberSlashed(uint256 index, address slasher);
 
+    /// @dev Constructor.
+    /// @param _owner: address of the owner of the contract;
+    /// @param _slasher: address of the slasher;
+    /// @param _register: address of the register;
     /// @param depth: depth of the merkle tree;
     /// @param _token: address of the ERC20 contract;
     /// @param _verifier: address of the Groth16 Verifier.
-    constructor(uint256 depth, address _verifier, address _token) {
+    constructor(address _owner, address _slasher, address _register, uint256 depth, address _verifier, address _token) {
+        _setupRole(DEFAULT_ADMIN_ROLE, _owner);
+        _setupRole(SLASHER_ROLE, _slasher);
+        _setupRole(REGISTER_ROLE, _register);
         SET_SIZE = 1 << depth;
 
         karma = Karma(_token);
@@ -62,9 +74,8 @@ contract KarmaRLN {
     /// NOTE: The set must not be full.
     ///
     /// @param identityCommitment: `identityCommitment`;
-    function register(uint256 identityCommitment) external {
+    function register(uint256 identityCommitment) external onlyRole(REGISTER_ROLE) {
         uint256 index = identityCommitmentIndex;
-        uint256 amount = karma.balanceOf(msg.sender);
         require(index < SET_SIZE, "RLN, register: set is full");
         require(members[identityCommitment].userAddress == address(0), "RLN, register: idCommitment already registered");
 
@@ -79,7 +90,7 @@ contract KarmaRLN {
     /// @dev Request for exit.
     /// @param identityCommitment: `identityCommitment`;
     /// @param proof: snarkjs's format generated proof (without public inputs) packed consequently.
-    function exit(uint256 identityCommitment, uint256[8] calldata proof) external {
+    function exit(uint256 identityCommitment, uint256[8] calldata proof) external onlyRole(REGISTER_ROLE) {
         User memory member = members[identityCommitment];
         require(member.userAddress != address(0), "RLN, withdraw: member doesn't exist");
         require(_verifyProof(identityCommitment, proof), "RLN, withdraw: invalid proof");
@@ -91,7 +102,7 @@ contract KarmaRLN {
     /// @dev Slashes identity with identityCommitment.
     /// @param identityCommitment: `identityCommitment`;
     /// @param proof: snarkjs's format generated proof (without public inputs) packed consequently.
-    function slash(uint256 identityCommitment, uint256[8] calldata proof) external {
+    function slash(uint256 identityCommitment, uint256[8] calldata proof) external onlyRole(SLASHER_ROLE) {
         User memory member = members[identityCommitment];
         require(member.userAddress != address(0), "RLN, slash: member doesn't exist");
         require(_verifyProof(identityCommitment, proof), "RLN, slash: invalid proof");

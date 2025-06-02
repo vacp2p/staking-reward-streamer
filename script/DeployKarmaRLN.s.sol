@@ -6,21 +6,22 @@ import { DeploymentConfig } from "./DeploymentConfig.s.sol";
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {Verifier} from "../src/rln/Verifier.sol";
+import { Groth16Verifier } from "../src/rln/Verifier.sol";
 import { KarmaRLN } from "../src/rln/KarmaRLN.sol";
 
 contract DeployKarmaScript is BaseScript {
-    function run() public returns (Karma, DeploymentConfig) {
+    function run() public returns (KarmaRLN, DeploymentConfig) {
         DeploymentConfig deploymentConfig = new DeploymentConfig(broadcaster);
         (address deployer,) = deploymentConfig.activeNetworkConfig();
-        
+
         uint256 depth = vm.envUint("DEPTH");
         address karmaAddress = vm.envAddress("KARMA_ADDRESS");
-        
+
         vm.startBroadcast(deployer);
-        Groth16Verifier verifier = new Groth16Verifier();
+        address verifier = (address)(new Groth16Verifier());
         // Deploy Karma logic contract
-        bytes memory initializeData = abi.encodeCall(KarmaRLN.initialize, (deployer, deployer, deployer, verifier, depth, karmaAddress));
+        bytes memory initializeData =
+            abi.encodeCall(KarmaRLN.initialize, (deployer, deployer, deployer, depth, verifier, karmaAddress));
         address impl = address(new KarmaRLN());
         // Create upgradeable proxy
         address proxy = address(new ERC1967Proxy(impl, initializeData));

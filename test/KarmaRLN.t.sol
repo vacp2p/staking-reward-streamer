@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 pragma solidity ^0.8.26;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
 import "forge-std/Test.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../src/rln/KarmaRLN.sol";
 import { IVerifier } from "../src/rln/IVerifier.sol";
 
-
-// A mock verifier which makes us skip the proof verification.
+/// @dev A mock verifier that allows toggling proof validity.
 contract MockVerifier is IVerifier {
     bool public result;
 
@@ -25,6 +23,7 @@ contract MockVerifier is IVerifier {
     )
         external
         view
+        override
         returns (bool)
     {
         return result;
@@ -36,199 +35,244 @@ contract MockVerifier is IVerifier {
 }
 
 contract RLNTest is Test {
-    event MemberRegistered(uint256 identityCommitment, uint256 messageLimit, uint256 index);
-    event MemberWithdrawn(uint256 index);
-    event MemberSlashed(uint256 index, address slasher);
+    KarmaRLN public rln;
+    MockVerifier public verifier;
 
-    Karma token;
-    KarmaRLN rln;
-    MockVerifier verifier;
+    uint256 private constant DEPTH = 2; // for most tests
+    uint256 private constant SMALL_DEPTH = 1; // for “full” test
 
-    uint256 depth = 20;
-    uint256 identityCommitment0 = 1234;
-    uint256 identityCommitment1 = 5678;
+    // Sample identity commitments
+    uint256 private identityCommitment0 = 1234;
+    uint256 private identityCommitment1 = 5678;
+    uint256 private identityCommitment2 = 9999;
 
-    address adminAddr = makeAddr("admin");
-    address registerAddr = makeAddr("register");
-    address slasherAddr = makeAddr("slasher");
-
-    address user0 = makeAddr("user0");
-    address user1 = makeAddr("user1");
-
-    uint256 messageLimit0 = 2;
-    uint256 messageLimit1 = 3;
-
-    uint256[8] mockProof =
+    // Sample SNARK proof (8‐element array)
+    uint256[8] private mockProof =
         [uint256(0), uint256(1), uint256(2), uint256(3), uint256(4), uint256(5), uint256(6), uint256(7)];
 
-    function deployRLN(uint256 _depth) public returns (KarmaRLN) {
-        // Deploy KarmaRLN contract
-        bytes memory initializeData = abi.encodeCall(KarmaRLN.initialize, (adminAddr, registerAddr, slasherAddr, _depth, address(verifier), address(token)));
+    // Role‐holders
+    address private adminAddr;
+    address private registerAddr;
+    address private slasherAddr;
+
+    function setUp() public {
+        // Assign deterministic addresses
+        adminAddr = makeAddr("admin");
+        registerAddr = makeAddr("register");
+        slasherAddr = makeAddr("slasher");
+
+        // Deploy mock verifier
+        verifier = new MockVerifier();
+
+        // Deploy KarmaRLN via UUPS proxy with DEPTH = 2
+        rln = _deployRLN(DEPTH, address(verifier));
+
+        // Sanity‐check that roles were assigned correctly
+        assertTrue(rln.hasRole(rln.DEFAULT_ADMIN_ROLE(), adminAddr));
+        assertTrue(rln.hasRole(rln.REGISTER_ROLE(), registerAddr));
+        assertTrue(rln.hasRole(rln.SLASHER_ROLE(), slasherAddr));
+    }
+
+    /// @dev Deploys a new KarmaRLN instance (behind ERC1967Proxy).
+    function _deployRLN(uint256 depth, address verifierAddr) internal returns (KarmaRLN) {
+        bytes memory initData = abi.encodeCall(
+            KarmaRLN.initialize,
+            (
+                adminAddr,
+                slasherAddr,
+                registerAddr,
+                depth,
+                verifierAddr,
+                address(0) // token address unused in these tests
+            )
+        );
         address impl = address(new KarmaRLN());
-        // Create upgradeable proxy
-        address proxy = address(new ERC1967Proxy(impl, initializeData));
+        address proxy = address(new ERC1967Proxy(impl, initData));
         return KarmaRLN(proxy);
     }
 
-    function deployKarmaToken() public returns (Karma) {
-        // Deploy Karma logic contract
-        bytes memory initializeData = abi.encodeCall(Karma.initialize, (adminAddr));
-        address impl = address(new Karma());
-        // Create upgradeable proxy
-        address proxy = address(new ERC1967Proxy(impl, initializeData));
-
-        return (Karma(proxy));
-    } 
-
-    function setUp() public {
-        verifier = new MockVerifier();
-        token = deployKarmaToken();
-        rln = deployRLN();
-    }
+    /* ---------- INITIAL STATE ---------- */
 
     function test_initial_state() public {
-        assertEq(rln.SET_SIZE(), 1 << depth);
-        assertEq(address(rln.karma()), address(token));
-        assertEq(address(rln.verifier()), address(verifier));
+        // SET_SIZE should be 2^DEPTH = 4
+        assertEq(rln.SET_SIZE(), uint256(1) << DEPTH);
+
+        // No identities registered yet
         assertEq(rln.identityCommitmentIndex(), 0);
+
+        // members(...) should return (address(0), 0) for any commitment
+        (address user0, uint256 idx0) = _memberData(identityCommitment0);
+        assertEq(user0, address(0));
+        assertEq(idx0, 0);
+
+        // Verifier address matches
+        assertEq(address(rln.verifier()), address(verifier));
     }
 
-    /* register */
+    /* ---------- REGISTER ---------- */
 
     function test_register_succeeds() public {
-        // Test: register one user
-        register(user0, identityCommitment0, messageLimit0);
-        // Test: register second user
-        register(user1, identityCommitment1, messageLimit1);
+        // Register first identity
+        uint256 indexBefore = rln.identityCommitmentIndex();
+        vm.startPrank(registerAddr);
+        vm.expectEmit(true, false, false, true);
+        emit KarmaRLN.MemberRegistered(identityCommitment0, indexBefore);
+        rln.register(identityCommitment0);
+        vm.stopPrank();
+
+        assertEq(rln.identityCommitmentIndex(), indexBefore + 1);
+        (address u0, uint256 i0) = _memberData(identityCommitment0);
+        assertEq(u0, registerAddr);
+        assertEq(i0, indexBefore);
+
+        // Register second identity
+        indexBefore = rln.identityCommitmentIndex();
+        vm.startPrank(registerAddr);
+        vm.expectEmit(true, false, false, true);
+        emit KarmaRLN.MemberRegistered(identityCommitment1, indexBefore);
+        rln.register(identityCommitment1);
+        vm.stopPrank();
+
+        assertEq(rln.identityCommitmentIndex(), indexBefore + 1);
+        (address u1, uint256 i1) = _memberData(identityCommitment1);
+        assertEq(u1, registerAddr);
+        assertEq(i1, indexBefore);
     }
 
     function test_register_fails_when_index_exceeds_set_size() public {
-        // Set size is (1 << smallDepth) = 2, and thus there can
-        // only be 2 members, otherwise reverts.
-        uint256 smallDepth = 1;
-        KarmaRLN smallRLN = deployRLN(smallDepth);
+        // Deploy a small RLN with depth = 1 => SET_SIZE = 2
+        KarmaRLN smallRLN = _deployRLN(SMALL_DEPTH, address(verifier));
+        address smallRegister = registerAddr;
 
-        // Register the first user
-        vm.startPrank(registerAddr);
-        smallRLN.register(identityCommitment0, minimalDeposit);
-        smallRLN.register(identityCommitment1, minimalDeposit);
+        // Fill up both slots
+        vm.startPrank(smallRegister);
+        smallRLN.register(identityCommitment0);
+        smallRLN.register(identityCommitment1);
         vm.stopPrank();
-        // Now tree (set) is full. Try register the third. It should revert.
-        uint256 identityCommitment2 = 9999;
-        // `register` should revert
-        vm.expectRevert("KarmaRLN, register: set is full");
-        smallRLN.register(identityCommitment2, minimalDeposit);
+
+        // Now the set is full (2 members). Attempt a third registration.
+        vm.startPrank(smallRegister);
+        vm.expectRevert(bytes("RLN, register: set is full"));
+        smallRLN.register(identityCommitment2);
+        vm.stopPrank();
+    }
+
+    function test_register_fails_when_duplicate_identity_commitment() public {
+        // Register once
+        vm.startPrank(registerAddr);
+        rln.register(identityCommitment0);
+        vm.stopPrank();
+
+        // Attempt to register the same commitment again
+        vm.startPrank(registerAddr);
+        vm.expectRevert(bytes("RLN, register: idCommitment already registered"));
+        rln.register(identityCommitment0);
         vm.stopPrank();
     }
 
-
-    function test_register_fails_when_duplicate_identity_commitments() public {
-        // Register first with user0 with identityCommitment0
-        register(user0, identityCommitment0);
-        // Register again with user1 with identityCommitment0
-        vm.startPrank(registerAddr);
-        // `register` should revert
-        vm.expectRevert("KarmaRLN, register: idCommitment already registered");
-        rln.register(identityCommitment0, rlnInitialTokenBalance);
-        vm.stopPrank();
-    }
+    /* ---------- EXIT ---------- */
 
     function test_exit_succeeds() public {
-        // Register first
-        register(user0, identityCommitment0);
-        // Withdraw user0
-        // Make sure proof verification is skipped
-        assertEq(verifier.result(), true);
-        rln.withdraw(identityCommitment0, mockProof);
-        rln.exit(identityCommitment0);
+        // Register the identity
+        vm.startPrank(registerAddr);
+        rln.register(identityCommitment0);
+        vm.stopPrank();
 
-        checkUserIsDeleted(identityCommitment0);
+        // Ensure mock verifier returns true by default
+        assertTrue(verifier.result());
+
+        // Call exit with a valid proof
+        vm.startPrank(registerAddr);
+        vm.expectEmit(false, false, false, true);
+        emit KarmaRLN.MemberExited(0);
+        rln.exit(identityCommitment0, mockProof);
+        vm.stopPrank();
+
+        // After exit, the member record should be cleared
+        (address u0, uint256 i0) = _memberData(identityCommitment0);
+        assertEq(u0, address(0));
+        assertEq(i0, 0);
     }
 
-    /* slash */
+    function test_exit_fails_when_not_registered() public {
+        // Attempt exit without prior registration
+        vm.startPrank(registerAddr);
+        vm.expectRevert(bytes("RLN, withdraw: member doesn't exist"));
+        rln.exit(identityCommitment1, mockProof);
+        vm.stopPrank();
+    }
+
+    function test_exit_fails_when_invalid_proof() public {
+        // Register the identity
+        vm.startPrank(registerAddr);
+        rln.register(identityCommitment0);
+        vm.stopPrank();
+
+        // Make proof invalid
+        verifier.changeResult(false);
+        assertFalse(verifier.result());
+
+        // Attempt exit with invalid proof
+        vm.startPrank(registerAddr);
+        vm.expectRevert(bytes("RLN, withdraw: invalid proof"));
+        rln.exit(identityCommitment0, mockProof);
+        vm.stopPrank();
+    }
+
+    /* ---------- SLASH ---------- */
 
     function test_slash_succeeds() public {
-        // Test: register and get slashed
-        register(user0, identityCommitment0, messageLimit0);
-        (,, uint256 index) = rln.members(identityCommitment0);
-        vm.startPrank(slasherAddr);
-        vm.expectEmit(true, true, false, true);
-        emit MemberSlashed(index, slashedReceiver);
-        // Slash and check balances
-        rln.slash(identityCommitment0, mockProof);
-
-        // Check the record of user0 has been deleted
+        // Register the identity first
+        vm.startPrank(registerAddr);
+        rln.register(identityCommitment1);
         vm.stopPrank();
-        checkUserIsDeleted(identityCommitment0);
 
-        // Test: register, withdraw, ang get slashed before release
-        register(user1, identityCommitment1, messageLimit1);
+        // Retrieve the assigned index
+        (, uint256 index1) = _memberData(identityCommitment1);
+
+        // Slash with a valid proof
         vm.startPrank(slasherAddr);
-        rln.slash(identityCommitment1, slashedReceiver, mockProof);
+        vm.expectEmit(false, true, false, true);
+        emit KarmaRLN.MemberSlashed(index1, slasherAddr);
+        rln.slash(identityCommitment1, mockProof);
         vm.stopPrank();
-        // Check the record of user1 has been deleted
-        checkUserIsDeleted(identityCommitment1);
+
+        // After slash, the member record should be cleared
+        (address u1, uint256 i1) = _memberData(identityCommitment1);
+        assertEq(u1, address(0));
+        assertEq(i1, 0);
     }
 
-
-
     function test_slash_fails_when_not_registered() public {
-        // It fails if the user is not registered yet
+        // Attempt to slash a non‐existent identity
         vm.startPrank(slasherAddr);
-        vm.expectRevert("KarmaRLN, slash: member doesn't exist");
-        rln.slash(identityCommitment0, slashedReceiver, mockProof);
+        vm.expectRevert(bytes("RLN, slash: member doesn't exist"));
+        rln.slash(identityCommitment0, mockProof);
         vm.stopPrank();
     }
 
     function test_slash_fails_when_invalid_proof() public {
-        // It fails if the proof is invalid
-        // Register first
-        register(user0, identityCommitment0);
-        // Make sure mock verifier always return false
-        // And thus the proof is always considered invalid
+        // Register the identity
+        vm.startPrank(registerAddr);
+        rln.register(identityCommitment0);
+        vm.stopPrank();
+
+        // Make proof invalid
         verifier.changeResult(false);
-        assertEq(verifier.result(), false);
-        vm.expectRevert("KarmaRLN, slash: invalid proof");
-        // Slash fails because of the invalid proof
+        assertFalse(verifier.result());
+
+        // Attempt to slash with invalid proof
         vm.startPrank(slasherAddr);
+        vm.expectRevert(bytes("RLN, slash: invalid proof"));
         rln.slash(identityCommitment0, mockProof);
         vm.stopPrank();
     }
 
-    /* Helpers */
-    function getRegisterAmount(uint256 messageLimit) public view returns (uint256) {
-        return messageLimit * minimalDeposit;
+    /* ========== HELPERS ========== */
+
+    /// @dev Returns (userAddress, index) for a given identityCommitment.
+    function _memberData(uint256 commitment) internal view returns (address userAddress, uint256 index) {
+        (userAddress, index) = rln.members(commitment);
+        return (userAddress, index);
     }
-
-    function register(address user, uint256 identityCommitment, uint256 messageLimit) public {
-        // Mint to user first
-
-        uint256 identityCommitmentIndexBefore = rln.identityCommitmentIndex();
-        // User approves to rln and calls register
-        vm.startPrank(registerAddr);
-        // Ensure event is emitted
-        vm.expectEmit(true, true, false, true);
-        emit MemberRegistered(identityCommitment, identityCommitmentIndexBefore);
-        rln.register(identityCommitment);
-        vm.stopPrank();
-
-
-        // KarmaRLN state
-        assertEq(rln.identityCommitmentIndex(), identityCommitmentIndexBefore + 1);
-        // User state
-        (address userAddress, uint256 index) = rln.members(identityCommitment);
-        assertEq(userAddress, user);
-        assertEq(index, identityCommitmentIndexBefore);
-    }
-
-
-
-    function checkUserIsDeleted(uint256 identityCommitment) public {
-        (address userAddress, uint256 index) = rln.members(identityCommitment);
-        assertEq(userAddress, address(0));
-        assertEq(index, 0);
-
-
-    }
-
 }

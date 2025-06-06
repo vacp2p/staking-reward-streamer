@@ -89,7 +89,9 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
      * @dev This function is only callable by the owner.
      */
     function _authorizeUpgrade(address) internal view override {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "RLN, _authorizeUpgrade: caller is not the owner");
+        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+            revert KarmaRLN__Unauthorized();
+        }
     }
 
     /// @dev Adds `identityCommitment` to the registry set and takes the necessary stake amount.

@@ -119,7 +119,9 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     /// @param proof: snarkjs's format generated proof (without public inputs) packed consequently.
     function exit(uint256 identityCommitment, uint256[8] calldata proof) external onlyRole(REGISTER_ROLE) {
         User memory member = members[identityCommitment];
-        require(member.userAddress != address(0), "RLN, withdraw: member doesn't exist");
+        if (!member.userAddress == address(0) {
+          revert KarmaRLN__MemberNotFound();
+        }
         require(_verifyProof(identityCommitment, proof), "RLN, withdraw: invalid proof");
 
         delete members[identityCommitment];

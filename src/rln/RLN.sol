@@ -136,7 +136,7 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
         require(member.userAddress != address(0), "RLN, slash: member doesn't exist");
         require(_verifyProof(identityCommitment, proof), "RLN, slash: invalid proof");
 
-        //karma.slash(member.userAddress);
+        karma.slash(member.userAddress);
         delete members[identityCommitment];
 
         emit MemberSlashed(member.index, msg.sender);

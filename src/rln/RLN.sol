@@ -14,6 +14,12 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
     bytes32 public constant REGISTER_ROLE = keccak256("REGISTER_ROLE");
 
+    error RLN__InvalidProof();
+    error RLN__MemberNotFound();
+    error RLN__IdCommitmentAlreadyRegistered();
+    error RLN__SetIsFull();
+    error RLN__Unauthorized();
+
     /// @dev User metadata struct.
     /// @param userAddress: address of depositor;
     struct User {
@@ -90,7 +96,7 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
      */
     function _authorizeUpgrade(address) internal view override {
         if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
-            revert KarmaRLN__Unauthorized();
+            revert RLN__Unauthorized();
         }
     }
 
@@ -99,14 +105,16 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     /// NOTE: The set must not be full.
     ///
     /// @param identityCommitment: `identityCommitment`;
-    function register(uint256 identityCommitment) external onlyRole(REGISTER_ROLE) {
+    function register(uint256 identityCommitment, address user) external onlyRole(REGISTER_ROLE) {
         uint256 index = identityCommitmentIndex;
-        require(index < SET_SIZE, "RLN, register: set is full");
-        require(
-            members[identityCommitment].userAddress == address(0), "RLN, register: idCommitment already registered"
-        );
+        if (index >= SET_SIZE) {
+            revert RLN__SetIsFull();
+        }
+        if (members[identityCommitment].userAddress != address(0)) {
+            revert RLN__IdCommitmentAlreadyRegistered();
+        }
 
-        members[identityCommitment] = User(msg.sender, index);
+        members[identityCommitment] = User(user, index);
         emit MemberRegistered(identityCommitment, index);
 
         unchecked {
@@ -119,10 +127,12 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     /// @param proof: snarkjs's format generated proof (without public inputs) packed consequently.
     function exit(uint256 identityCommitment, uint256[8] calldata proof) external onlyRole(REGISTER_ROLE) {
         User memory member = members[identityCommitment];
-        if (!member.userAddress == address(0) {
-          revert KarmaRLN__MemberNotFound();
+        if (member.userAddress == address(0)) {
+            revert RLN__MemberNotFound();
         }
-        require(_verifyProof(identityCommitment, proof), "RLN, withdraw: invalid proof");
+        if (!_verifyProof(identityCommitment, proof)) {
+            revert RLN__InvalidProof();
+        }
 
         delete members[identityCommitment];
         emit MemberExited(member.index);
@@ -133,8 +143,12 @@ contract RLN is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     /// @param proof: snarkjs's format generated proof (without public inputs) packed consequently.
     function slash(uint256 identityCommitment, uint256[8] calldata proof) external onlyRole(SLASHER_ROLE) {
         User memory member = members[identityCommitment];
-        require(member.userAddress != address(0), "RLN, slash: member doesn't exist");
-        require(_verifyProof(identityCommitment, proof), "RLN, slash: invalid proof");
+        if (member.userAddress == address(0)) {
+            revert RLN__MemberNotFound();
+        }
+        if (!_verifyProof(identityCommitment, proof)) {
+            revert RLN__InvalidProof();
+        }
 
         karma.slash(member.userAddress);
         delete members[identityCommitment];

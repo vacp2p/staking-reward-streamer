@@ -9,7 +9,7 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { Groth16Verifier } from "../src/rln/Verifier.sol";
 import { RLN } from "../src/rln/RLN.sol";
 
-contract DeployKarmaScript is BaseScript {
+contract DeployRLNScript is BaseScript {
     function run() public returns (RLN, DeploymentConfig) {
         DeploymentConfig deploymentConfig = new DeploymentConfig(broadcaster);
         (address deployer,) = deploymentConfig.activeNetworkConfig();

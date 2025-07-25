@@ -2,16 +2,21 @@
 pragma solidity 0.8.26;
 
 import { Test } from "forge-std/Test.sol";
+import { DeploymentConfig } from "../script/DeploymentConfig.s.sol";
+import { DeployKarmaTiersScript } from "../script/DeployKarmaTiers.s.sol";
 import { KarmaTiers } from "../src/KarmaTiers.sol";
 
 contract KarmaTiersTest is Test {
     KarmaTiers public karmaTiers;
-    address public owner = address(0xABCD);
+    address public owner;
     address public nonOwner = address(0xBEEF);
 
-    function setUp() public {
-        vm.prank(owner);
-        karmaTiers = new KarmaTiers();
+    function setUp() public virtual {
+        DeployKarmaTiersScript deployment = new DeployKarmaTiersScript();
+        (KarmaTiers _karmaTiers, DeploymentConfig deploymentConfig) = deployment.run();
+        (address _deployer,) = deploymentConfig.activeNetworkConfig();
+        owner = _deployer;
+        karmaTiers = _karmaTiers;
     }
 
     function test_Revert_When_UpdateTiersCalledByNonOwner() public {
@@ -55,7 +60,7 @@ contract KarmaTiersTest is Test {
         newTiers[0] = KarmaTiers.Tier({ minKarma: 0, maxKarma: 100, name: longName, txPerEpoch: 5 });
 
         vm.prank(owner);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(KarmaTiers.TierNameTooLong.selector, 33, 32));
         karmaTiers.updateTiers(newTiers);
     }
 

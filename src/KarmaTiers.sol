@@ -16,6 +16,8 @@ contract KarmaTiers is Ownable {
     error InvalidTxAmount();
     /// @notice Emitted when a tier name is empty
     error EmptyTierName();
+    /// @notice Emitted when a tier array is empty
+    error EmptyTiersArray();
     /// @notice Emitted when a tier is not found
     error TierNotFound();
     /// @notice Emitted when a tier name exceeds maximum length
@@ -66,8 +68,9 @@ contract KarmaTiers is Ownable {
     //////////////////////////////////////////////////////////////////////////*/
 
     function updateTiers(Tier[] calldata newTiers) external onlyOwner {
-        if (newTiers.length == 0) revert();
-
+        if (newTiers.length == 0) {
+            revert EmptyTiersArray();
+        }
         // Ensure the first tier starts at minKarma = 0
         if (newTiers[0].minKarma != 0) {
             revert NonContiguousTiers(0, 0, newTiers[0].minKarma);

@@ -156,3 +156,7 @@ contract StakeVaultCoverageTest is StakeVaultTest {
         stakeVault.withdraw(otherToken, 1e18, address(0));
     }
 }
+
+// Tests removed: Trust functionality has been completely removed from StakeVault
+
+// Tests removed: Security tests are no longer relevant as trust functionality has been removed

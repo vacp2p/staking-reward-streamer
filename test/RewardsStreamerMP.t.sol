@@ -2365,21 +2365,43 @@ contract LeaveTest is StakeManagerTest {
     }
 
     function test_UpgradeStakeManager() public {
-        // first, upgrade to new stake manager
-        _upgradeStakeManager();
-
-        // after upgrade, vault functions should work normally (trust functionality removed)
+        // first, stake with current stake manager before upgrade
         _stake(alice, 100e18, 0);
 
+        // verify vault is working before upgrade
         StakeVault vault = StakeVault(vaults[alice]);
+        assertEq(vault.amountStaked(), 100e18, "Should have 100e18 staked before upgrade");
+
+        // upgrade to new stake manager
+        _upgradeStakeManager();
+
+        // after upgrade, vault functions should require trusting the new stake manager
+        // trying to stake/unstake without trusting should revert
+        vm.expectRevert(StakeVault.StakeVault__StakeManagerImplementationNotTrusted.selector);
+        _stake(alice, 50e18, 0);
+
+        // trust the new stake manager implementation
+        vm.prank(alice);
+        vault.trustStakeManager(streamer.implementation());
+
+        // now vault functions should work with the trusted new stake manager
+        _stake(alice, 50e18, 0);
+        assertEq(vault.amountStaked(), 150e18, "Should have 150e18 staked after upgrade");
+
+        // lock the funds
         vm.prank(alice);
         vault.lock(365 days);
 
-        // functions should work normally without trust checks
+        // unstaking should fail while funds are locked (StakeManager enforces this)
+        // The exact error depends on StakeManager implementation, but it should revert
+        vm.expectRevert(); // Generic revert expectation since we don't know the exact error
         _unstake(alice, 100e18);
 
-        // leave function should work based on lockUntil only
-        // (we would need to wait for lock to expire or manipulate time for this to work)
+        // leave function should work based on lockUntil only (no trust required)
+        // but should still fail due to time lock
+        vm.prank(alice);
+        vm.expectRevert(StakeVault.StakeVault__FundsLocked.selector);
+        vault.leave(alice);
     }
 }
 

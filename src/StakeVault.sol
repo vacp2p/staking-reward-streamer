@@ -151,13 +151,16 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
      * @param _seconds The time period to lock the staked amount for.
      */
     function lock(uint256 _seconds) external onlyOwner onlyTrustedStakeManager {
-        // Update lock time before calling stake manager, using same logic as StakeManager
-        if (_seconds > 0) {
-            uint256 newLockEnd = Math.max(lockUntil, block.timestamp) + _seconds;
-            lockUntil = newLockEnd;
-        }
+        // Store old lock time for calculation
+        uint256 oldLockUntil = lockUntil;
         
         stakeManager.lock(_seconds);
+        
+        // Update lock time after manager call, using same logic as StakeManager
+        if (_seconds > 0) {
+            uint256 newLockEnd = Math.max(oldLockUntil, block.timestamp) + _seconds;
+            lockUntil = newLockEnd;
+        }
     }
 
     /**
@@ -327,13 +330,17 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
      * @param _source The address from which tokens will be transferred.
      */
     function _stake(uint256 _amount, uint256 _seconds, address _source) internal {
-        // Update lock time before calling stake manager, using same logic as StakeManager
+        // Store old lock time for calculation
+        uint256 oldLockUntil = lockUntil;
+        
+        stakeManager.stake(_amount, _seconds);
+        
+        // Update lock time after manager call, using same logic as StakeManager
         if (_seconds > 0) {
-            uint256 newLockEnd = Math.max(lockUntil, block.timestamp) + _seconds;
+            uint256 newLockEnd = Math.max(oldLockUntil, block.timestamp) + _seconds;
             lockUntil = newLockEnd;
         }
         
-        stakeManager.stake(_amount, _seconds);
         bool success = STAKING_TOKEN.transferFrom(_source, address(this), _amount);
         if (!success) {
             revert StakeVault__StakingFailed();

@@ -8,5 +8,6 @@ interface IStakeVault {
     function stakeManager() external view returns (IStakeManagerProxy);
     function register() external;
     function lockUntil() external view returns (uint256);
+    /// @notice Updates lock time - primarily used for vault migration
     function updateLockUntil(uint256 newLockUntil) external;
 }

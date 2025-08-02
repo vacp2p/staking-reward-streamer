@@ -193,10 +193,6 @@ contract StakeManager is
         totalStaked += amount;
         totalMPStaked += _deltaMpTotal;
 
-        if (lockPeriod != 0) {
-            IStakeVault(msg.sender).updateLockUntil(_newLockEnd);
-        }
-
         vault.mpAccrued += _deltaMpTotal;
         totalMPAccrued += _deltaMpTotal;
 
@@ -231,7 +227,6 @@ contract StakeManager is
         // Update account state
         vault.mpAccrued += deltaMp;
         vault.maxMP += deltaMp;
-        IStakeVault(msg.sender).updateLockUntil(newLockEnd);
 
         // Update global state
         totalMPAccrued += deltaMp;

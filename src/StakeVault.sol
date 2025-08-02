@@ -5,6 +5,7 @@ pragma solidity 0.8.26;
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IStakeManagerProxy } from "./interfaces/IStakeManagerProxy.sol";
 import { IStakeVault } from "./interfaces/IStakeVault.sol";
 
@@ -146,9 +147,16 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
      * @notice Lock the staked amount for a specified time.
      * @dev This function is only callable by the owner.
      * @dev Can only be called if the stake manager is trusted.
+     * @dev Updates lockUntil internally using the same logic as StakeManager.
      * @param _seconds The time period to lock the staked amount for.
      */
     function lock(uint256 _seconds) external onlyOwner onlyTrustedStakeManager {
+        // Update lock time before calling stake manager, using same logic as StakeManager
+        if (_seconds > 0) {
+            uint256 newLockEnd = Math.max(lockUntil, block.timestamp) + _seconds;
+            lockUntil = newLockEnd;
+        }
+        
         stakeManager.lock(_seconds);
     }
 
@@ -296,7 +304,7 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
 
     /**
      * @notice Updates the lock until timestamp.
-     * @dev This function is only callable by the trusted stake manager.
+     * @dev This function is only callable by the trusted stake manager for migration purposes.
      * @param _lockUntil The new lock until timestamp.
      */
     function updateLockUntil(uint256 _lockUntil) external onlyTrustedStakeManager {
@@ -313,11 +321,18 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
     /**
      * @notice Stakes tokens for a specified time.
      * @dev Reverts if the staking token transfer fails.
+     * @dev Updates lockUntil internally using the same logic as StakeManager.
      * @param _amount The amount of tokens to stake.
      * @param _seconds The time period to stake for.
      * @param _source The address from which tokens will be transferred.
      */
     function _stake(uint256 _amount, uint256 _seconds, address _source) internal {
+        // Update lock time before calling stake manager, using same logic as StakeManager
+        if (_seconds > 0) {
+            uint256 newLockEnd = Math.max(lockUntil, block.timestamp) + _seconds;
+            lockUntil = newLockEnd;
+        }
+        
         stakeManager.stake(_amount, _seconds);
         bool success = STAKING_TOKEN.transferFrom(_source, address(this), _amount);
         if (!success) {

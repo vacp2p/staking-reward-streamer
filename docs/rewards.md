@@ -90,7 +90,7 @@ We consider any real-time rewards "pending" rewards until the account interacts 
 are calculated as:
 
 $$
-\text{Pending Rewards} = \text{Account Weight} \times \left( \text{Current Reward Index} \minus \text{Account's Last Reward Index} \right)
+\text{Pending Rewards} = \text{Account Weight} \times \left( \text{Current Reward Index} - \text{Account's Last Reward Index} \right)
 $$
 
 The indicies are a new concept we'll cover next.

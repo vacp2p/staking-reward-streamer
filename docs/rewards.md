@@ -104,9 +104,9 @@ approach ensures fair distribution even as accounts enter and exit the system or
 
 The global reward index represents the cumulative rewards per unit of weight since the system's inception. It increases
 whenever new rewards are added to the system:
-$
+$$
 \text{New Index} = \text{Current Index} + \frac{\text{New Rewards} \times \text{Scale Factor}}{\text{Total System Weight}}
-$
+$$
 
 Where:
 

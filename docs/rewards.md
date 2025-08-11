@@ -14,7 +14,7 @@ For example, if 1000 tokens are to be distributed over the next 10 days, the rat
 tokens are then distributed to accounts based on their relative weights in the system.
 
 In other words, if Alice and Bob both own exactly 50% of the total stake in the system (including MP), they would each
-receive 50% of the rewards, or 5 tokens per day in this example.
+receive 50% of the rewards, or 50 tokens per day in this example.
 
 This is a rather trivial example. In practice we'll run into much more complex scenarios. Alice and Bob might have the
 same stake, but participated in the system for different amounts of time. Or, one of them might have unstaked some

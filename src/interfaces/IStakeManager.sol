@@ -13,6 +13,7 @@ import { IStakeConstants } from "./IStakeConstants.sol";
  *      funds for a determined period of time.
  */
 interface IStakeManager is ITrustedCodehashAccess, IStakeConstants {
+    error StakeManager__InvalidMigration();
     /// @notice Emitted when a vault isn't registered.
     error StakeManager__VaultNotRegistered();
     /// @notice Emitted when a vault is already registered.
@@ -23,8 +24,6 @@ interface IStakeManager is ITrustedCodehashAccess, IStakeConstants {
     error StakeManager__AmountCannotBeZero();
     /// @notice Emitted when emergency mode is enabled.
     error StakeManager__EmergencyModeEnabled();
-    /// @notice Emitted trying to migrate to non empty vault
-    error StakeManager__MigrationTargetHasFunds();
     /// @notice Emitted when the caller is not the owner of the vault.
     error StakeManager__Unauthorized();
     /// @notice Emitted when the duration is zero.
@@ -35,8 +34,8 @@ interface IStakeManager is ITrustedCodehashAccess, IStakeConstants {
     error StakeManager__RewardPeriodNotEnded();
     /// @notice Emitted when trying to unstake and funds are locked
     error StakeManager__FundsLocked();
-
     /// @notice Emitted when a vault is registered.
+
     event VaultRegistered(address indexed vault, address indexed owner);
     /// @notice Emitted when a vault is migrated.
     event VaultMigrated(address indexed from, address indexed to);

@@ -100,4 +100,16 @@ contract VaultFactory is Ownable {
         clone.register();
         emit VaultCreated(address(clone), msg.sender);
     }
+
+    /**
+     * @notice Creates an instance of a `StakeVault` contract.
+     * @dev Also takes care of registering the newly created `StakeVault` contract.
+     * @return clone Address of the newly created `StakeVault` contract.
+     */
+    function migrateVault(StakeVault oldVault) external returns (StakeVault clone) {
+        clone = StakeVault(Clones.clone(vaultImplementation));
+        clone.migrate(oldVault);
+        clone.register();
+        emit VaultCreated(address(clone), msg.sender);
+    }
 }

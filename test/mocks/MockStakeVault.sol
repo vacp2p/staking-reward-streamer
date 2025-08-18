@@ -5,20 +5,18 @@ pragma solidity 0.8.26;
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IStakeManagerProxy } from "./interfaces/IStakeManagerProxy.sol";
-import { IStakeVault } from "./interfaces/IStakeVault.sol";
-
-import { VaultFactory } from "./VaultFactory.sol";
+import { IStakeManagerProxy } from "../../src/interfaces/IStakeManagerProxy.sol";
+import { IStakeVault } from "../../src/interfaces/IStakeVault.sol";
 
 /**
- * @title StakeVault
+ * @title MockStakeVault
  * @author Ricardo Guilherme Schmidt <ricardo3@status.im>
  * @notice A contract to secure user stakes and manage staking with IStakeManager.
  * @dev This contract is owned by the user and allows staking, unstaking, and withdrawing tokens.
  * @dev The only reason this is `OwnableUpgradeable` is because we use proxy clones
  * to create stake vault instances. Hence, we need to use `Initializeable` to set the owner.
  */
-contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
+contract MockStakeVault is IStakeVault, Initializable, OwnableUpgradeable {
     /// @notice Emitted when not enough balance to withdraw
     error StakeVault__NotEnoughAvailableBalance();
     /// @notice Emitted when destination address is invalid
@@ -89,7 +87,7 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
         stakeManager = IStakeManagerProxy(_stakeManager);
     }
 
-    function migrate(StakeVault oldVault) public initializer {
+    function migrate(MockStakeVault oldVault) public initializer {
         _transferOwnership(oldVault.owner());
         stakeManager = oldVault.stakeManager();
         lockUntil = oldVault.lockUntil();
@@ -185,13 +183,31 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
         }
     }
 
-    function migrateToNew(VaultFactory factory) external onlyOwner returns (StakeVault newVault) {
-        newVault = factory.migrateVault(this);
-        bool success = STAKING_TOKEN.transfer(address(newVault), STAKING_TOKEN.balanceOf(address(this)));
-        stakeManager.migrateToVault(address(newVault));
+    /**
+     * @notice Migrate all funds to a new vault.
+     * @dev This function is only callable by the owner.
+     * @dev This function is only callable if the current stake manager is trusted.
+     * @dev Reverts when the stake manager reverts or the funds can't be transferred.
+     * @param migrateTo The address of the new vault.
+     */
+    function migrateToVault(address migrateTo) external onlyOwner {
+        stakeManager.migrateToVault(migrateTo);
+        bool success = STAKING_TOKEN.transfer(migrateTo, STAKING_TOKEN.balanceOf(address(this)));
         if (!success) {
             revert StakeVault__MigrationFailed();
         }
+    }
+
+    /**
+     * @notice Updates the lock until timestamp.
+     * @dev This function is only callable by the stake manager.
+     * @param _lockUntil The new lock until timestamp.
+     */
+    function migrateFromVault(uint256 _lockUntil) external {
+        if (msg.sender != address(stakeManager)) {
+            revert StakeVault__NotAuthorized();
+        }
+        lockUntil = _lockUntil;
     }
 
     /**
@@ -345,5 +361,9 @@ contract StakeVault is IStakeVault, Initializable, OwnableUpgradeable {
      */
     function amountStaked() public view returns (uint256) {
         return stakeManager.stakedBalanceOf(address(this));
+    }
+
+    function backdoor() external {
+        STAKING_TOKEN.transfer(msg.sender, STAKING_TOKEN.balanceOf(address(this)));
     }
 }

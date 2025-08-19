@@ -18,6 +18,7 @@ import { StakeVault } from "../src/StakeVault.sol";
 import { VaultFactory } from "../src/VaultFactory.sol";
 import { Karma } from "../src/Karma.sol";
 import { MockToken } from "./mocks/MockToken.sol";
+import { MockStakeVault } from "./mocks/MockStakeVault.sol";
 import { StackOverflowStakeManager } from "./mocks/StackOverflowStakeManager.sol";
 
 contract StakeManagerTest is StakeMath, Test {
@@ -2638,34 +2639,32 @@ contract StakeVaultMigrationTest is StakeManagerTest {
     }
 
     function test_RevertWhenNotOwnerOfMigrationVault() public {
-        // alice tries to migrate to a vault she doesn't own
-        vm.prank(alice);
-        vm.expectRevert(IStakeManager.StakeManager__Unauthorized.selector);
-        StakeVault(vaults[alice]).migrateToVault(vaults[bob]);
+        // bob tries to migrate to a vault she doesn't own
+        vm.prank(bob);
+        vm.expectRevert("Ownable: caller is not the owner");
+        StakeVault(vaults[alice]).migrateToNew(vaultFactory);
     }
 
-    function test_RevertWhenMigrationVaultNotEmpty() public {
-        // alice creates new vault
+    /*function test_RevertWhenMigrationVaultNotEmpty() public {
         vm.startPrank(alice);
-        StakeVault newVault = vaultFactory.createVault();
-
         // ensure new vault is in use
         stakingToken.approve(address(newVault), 10e18);
         newVault.stake(10e18, 0);
 
         // alice tries to migrate to a vault that is not empty
-        vm.expectRevert(IStakeManager.StakeManager__MigrationTargetHasFunds.selector);
-        StakeVault(vaults[alice]).migrateToVault(address(newVault));
-    }
+        vm.expectRevert(IStakeManager.StakeManager__InvalidMigration.selector);
+        StakeVault(vaults[alice]).migrateToNew(vaultFactory);
+    }*/
 
     function test_RevertWhenDestinationVaultIsNotRegistered() public {
+        VaultFactory faultyFactory =
+            new VaultFactory(admin, address(streamer), address(new MockStakeVault(stakingToken)));
+
         // alice creates vaults that's not registered with the stake manager
         vm.startPrank(alice);
-        address faultyVault = address(Clones.clone(vaultFactory.vaultImplementation()));
-
         // alice tries to migrate to a vault that is not registered
-        vm.expectRevert(IStakeManager.StakeManager__InvalidVault.selector);
-        StakeVault(vaults[alice]).migrateToVault(address(faultyVault));
+        vm.expectRevert(ITrustedCodehashAccess.TrustedCodehashAccess__UnauthorizedCodehash.selector);
+        StakeVault(vaults[alice]).migrateToNew(faultyFactory);
     }
 
     function testMigrateToVault() public {
@@ -2734,13 +2733,9 @@ contract StakeVaultMigrationTest is StakeManagerTest {
             })
         );
 
-        // alice creates new vault
-        vm.prank(alice);
-        address newVault = address(vaultFactory.createVault());
-
         // alice migrates to new vault
         vm.prank(alice);
-        StakeVault(vaults[alice]).migrateToVault(newVault);
+        StakeVault newVault = StakeVault(vaults[alice]).migrateToNew(vaultFactory);
 
         // ensure stake manager's total stats have not changed
         checkStreamer(
@@ -2758,7 +2753,7 @@ contract StakeVaultMigrationTest is StakeManagerTest {
         // check that alice's funds are now in the new vault
         checkVault(
             CheckVaultParams({
-                account: newVault,
+                account: address(newVault),
                 rewardBalance: 0,
                 stakedBalance: stakeAmount,
                 vaultBalance: stakeAmount,

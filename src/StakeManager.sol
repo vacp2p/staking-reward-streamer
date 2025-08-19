@@ -364,16 +364,25 @@ contract StakeManager is
      */
     function migrateToVault(address migrateTo) external onlyNotEmergencyMode onlyTrustedCodehash onlyRegisteredVault {
         if (vaultOwners[migrateTo] == address(0)) {
-            revert StakeManager__InvalidVault();
+            revert StakeManager__InvalidMigration();
+        }
+        IStakeVault oldVaultAddr = IStakeVault(msg.sender);
+        IStakeVault newVaultAddr = IStakeVault(migrateTo);
+        // first ensure the vault to migrate to is actually owned by the same user
+        if (oldVaultAddr.owner() != newVaultAddr.owner()) {
+            revert StakeManager__InvalidMigration();
         }
 
-        // first ensure the vault to migrate to is actually owned by the same user
-        if (IStakeVault(msg.sender).owner() != IStakeVault(migrateTo).owner()) {
-            revert StakeManager__Unauthorized();
+        if (oldVaultAddr.lockUntil() != newVaultAddr.lockUntil()) {
+            revert StakeManager__InvalidMigration();
         }
 
         if (vaultData[migrateTo].stakedBalance > 0) {
-            revert StakeManager__MigrationTargetHasFunds();
+            revert StakeManager__InvalidMigration();
+        }
+
+        if (STAKING_TOKEN.balanceOf(address(newVaultAddr)) < vaultData[migrateTo].stakedBalance) {
+            revert StakeManager__InvalidMigration();
         }
 
         _updateGlobalState();
@@ -389,7 +398,6 @@ contract StakeManager is
         newVault.maxMP = oldVault.maxMP;
         newVault.lastMPUpdateTime = oldVault.lastMPUpdateTime;
         newVault.rewardsAccrued = oldVault.rewardsAccrued;
-        IStakeVault(migrateTo).migrateFromVault(IStakeVault(msg.sender).lockUntil());
 
         delete vaultData[msg.sender];
 

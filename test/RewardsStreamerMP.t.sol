@@ -2353,6 +2353,33 @@ contract LeaveTest is StakeManagerTest {
 
         assertEq(stakingToken.balanceOf(alice), aliceInitialBalance, "Alice has withdrawn her funds");
     }
+
+    
+    function test_WithdrawFromVaultCannotHappenBeforeLockupEnd() public {
+        uint256 aliceInitialBalance = stakingToken.balanceOf(alice);
+        uint256 stakeAmount = 10e18;
+        uint256 lockUpPeriod = streamer.MIN_LOCKUP_PERIOD();
+        _stake(alice, stakeAmount, lockUpPeriod);
+        assertEq(stakingToken.balanceOf(alice), aliceInitialBalance - stakeAmount, "Alice should have staked tokens");
+        _leave(alice);
+        vm.startPrank(alice);
+        vm.expectRevert(StakeVault.StakeVault__FundsLocked.selector);
+        StakeVault(vaults[alice]).withdrawFromVault(stakeAmount, alice);
+        assertEq(stakingToken.balanceOf(alice), aliceInitialBalance - stakeAmount, "Alice should still not have her funds back");
+    }
+
+    function test_WithdrawStakingTokenCannotHappenBeforeLockupEnd() public {
+        uint256 aliceInitialBalance = stakingToken.balanceOf(alice);
+        uint256 stakeAmount = 10e18;
+        uint256 lockUpPeriod = streamer.MIN_LOCKUP_PERIOD();
+        _stake(alice, stakeAmount, lockUpPeriod);
+        assertEq(stakingToken.balanceOf(alice), aliceInitialBalance - stakeAmount, "Alice should have staked tokens");
+        _leave(alice);
+        vm.prank(alice);
+        StakeVault(vaults[alice]).withdraw(stakingToken, stakeAmount);
+        assertEq(stakingToken.balanceOf(alice), aliceInitialBalance - stakeAmount, "Alice should still not have her funds back");
+    }
+
 }
 
 contract MaliciousUpgradeTest is StakeManagerTest {

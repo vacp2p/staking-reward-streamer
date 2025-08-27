@@ -76,6 +76,14 @@ contract StakeManager is
     mapping(address vault => address owner) public vaultOwners;
     /// @notice Flag to enable emergency mode.
     bool public emergencyModeEnabled;
+    address public guardian;
+
+    modifier onlyAdminOrGuardian() {
+        if (msg.sender != guardian && msg.sender != owner()) {
+            revert StakeManager__Unauthorized();
+        }
+        _;
+    }
 
     modifier onlyRegisteredVault() {
         if (vaultOwners[msg.sender] == address(0)) {
@@ -135,6 +143,10 @@ contract StakeManager is
      */
     function setRewardsSupplier(address _rewardsSupplier) external onlyOwner onlyNotEmergencyMode {
         rewardsSupplier = _rewardsSupplier;
+    }
+
+    function setGuardian(address _guardian) external onlyOwner onlyNotEmergencyMode {
+        guardian = _guardian;
     }
 
     /**
@@ -350,7 +362,7 @@ contract StakeManager is
      * @dev This function is only callable when emergency mode is disabled.
      * @dev Only the owner of the contract can call this function.
      */
-    function enableEmergencyMode() external onlyOwner onlyNotEmergencyMode {
+    function enableEmergencyMode() external onlyAdminOrGuardian onlyNotEmergencyMode {
         emergencyModeEnabled = true;
         emit EmergencyModeEnabled();
     }

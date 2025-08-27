@@ -2015,9 +2015,9 @@ contract EmergencyExitTest is StakeManagerTest {
         _emergencyExit(alice);
     }
 
-    function test_OnlyOwnerCanEnableEmergencyMode() public {
+    function test_OnlyOwnerOrGuardianCanEnableEmergencyMode() public {
         vm.prank(alice);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(IStakeManager.StakeManager__Unauthorized.selector);
         streamer.enableEmergencyMode();
     }
 

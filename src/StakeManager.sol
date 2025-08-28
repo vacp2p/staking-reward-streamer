@@ -78,8 +78,11 @@ contract StakeManager is
     bool public emergencyModeEnabled;
     address public guardian;
 
+    /// @notice Operator role keccak256("GUARDIAN_ROLE")
+    bytes32 public constant GUARDIAN_ROLE = 0x55435dd261a4b9b3364963f7738a7a662ad9c84396d64be3365284bb7f0a5041;
+
     modifier onlyAdminOrGuardian() {
-        if (msg.sender != guardian && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+        if (!hasRole(GUARDIAN_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
             revert StakeManager__Unauthorized();
         }
         _;
@@ -143,10 +146,6 @@ contract StakeManager is
      */
     function setRewardsSupplier(address _rewardsSupplier) external onlyRole(DEFAULT_ADMIN_ROLE) onlyNotEmergencyMode {
         rewardsSupplier = _rewardsSupplier;
-    }
-
-    function setGuardian(address _guardian) external onlyRole(DEFAULT_ADMIN_ROLE) onlyNotEmergencyMode {
-        guardian = _guardian;
     }
 
     /**

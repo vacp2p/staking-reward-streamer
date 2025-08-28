@@ -52,7 +52,7 @@ contract StakeManagerTest is StakeMath, Test {
         vm.startPrank(admin);
         karma.addRewardDistributor(address(streamer));
         streamer.setRewardsSupplier(address(karma));
-        streamer.setGuardian(address(guardian));
+        streamer.grantRole(streamer.GUARDIAN_ROLE(), address(guardian));
         vm.stopPrank();
 
         address[4] memory accounts = [alice, bob, charlie, dave];

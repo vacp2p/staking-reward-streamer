@@ -31,6 +31,7 @@ contract StakeManagerTest is StakeMath, Test {
     address internal bob = makeAddr("bob");
     address internal charlie = makeAddr("charlie");
     address internal dave = makeAddr("dave");
+    address internal guardian = makeAddr("guardian");
 
     mapping(address owner => address vault) public vaults;
 
@@ -51,6 +52,7 @@ contract StakeManagerTest is StakeMath, Test {
         vm.startPrank(admin);
         karma.addRewardDistributor(address(streamer));
         streamer.setRewardsSupplier(address(karma));
+        streamer.setGuardian(address(guardian));
         vm.stopPrank();
 
         address[4] memory accounts = [alice, bob, charlie, dave];
@@ -2013,6 +2015,16 @@ contract EmergencyExitTest is StakeManagerTest {
         _stake(alice, 10e18, 0);
         vm.expectRevert(StakeVault.StakeVault__NotAllowedToExit.selector);
         _emergencyExit(alice);
+    }
+
+    function test_OwnerCanEnableEmergencyMode() public {
+        vm.prank(admin);
+        streamer.enableEmergencyMode();
+    }
+
+    function test_GuardianCanEnableEmergencyMode() public {
+        vm.prank(guardian);
+        streamer.enableEmergencyMode();
     }
 
     function test_OnlyOwnerOrGuardianCanEnableEmergencyMode() public {

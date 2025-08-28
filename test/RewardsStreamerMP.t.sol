@@ -2245,7 +2245,7 @@ contract UpgradeTest is StakeManagerTest {
         address newImpl = address(new StakeManager());
         bytes memory initializeData;
         vm.prank(alice);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(IStakeManager.StakeManager__Unauthorized.selector);
         UUPSUpgradeable(streamer).upgradeToAndCall(newImpl, initializeData);
     }
 

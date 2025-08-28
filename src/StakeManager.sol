@@ -79,7 +79,7 @@ contract StakeManager is
     address public guardian;
 
     modifier onlyAdminOrGuardian() {
-        if (msg.sender != guardian && msg.sender != owner()) {
+        if (msg.sender != guardian && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
             revert StakeManager__Unauthorized();
         }
         _;
@@ -141,11 +141,11 @@ contract StakeManager is
      * @dev The supplier is going to be the `Karma` token.
      * @param _rewardsSupplier The address of the rewards supplier.
      */
-    function setRewardsSupplier(address _rewardsSupplier) external onlyOwner onlyNotEmergencyMode {
+    function setRewardsSupplier(address _rewardsSupplier) external onlyRole(DEFAULT_ADMIN_ROLE) onlyNotEmergencyMode {
         rewardsSupplier = _rewardsSupplier;
     }
 
-    function setGuardian(address _guardian) external onlyOwner onlyNotEmergencyMode {
+    function setGuardian(address _guardian) external onlyRole(DEFAULT_ADMIN_ROLE) onlyNotEmergencyMode {
         guardian = _guardian;
     }
 
@@ -589,7 +589,9 @@ contract StakeManager is
      * @dev This function is only callable by the owner.
      */
     function _authorizeUpgrade(address) internal view override {
-        _checkOwner();
+        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+            revert StakeManager__Unauthorized();
+        }
     }
 
     /*//////////////////////////////////////////////////////////////////////////

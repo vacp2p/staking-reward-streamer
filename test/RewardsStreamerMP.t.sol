@@ -51,7 +51,7 @@ contract StakeManagerTest is StakeMath, Test {
         // set up reward distribution
         vm.startPrank(admin);
         karma.addRewardDistributor(address(streamer));
-        streamer.setRewardsSupplier(address(karma));
+        streamer.grantRole(streamer.REWARDS_SUPPLIER_ROLE(), address(karma));
         streamer.grantRole(streamer.GUARDIAN_ROLE(), address(guardian));
         vm.stopPrank();
 

@@ -78,8 +78,10 @@ contract StakeManager is
     bool public emergencyModeEnabled;
     address public guardian;
 
-    /// @notice Operator role keccak256("GUARDIAN_ROLE")
+    /// @notice Guardian role keccak256("GUARDIAN_ROLE")
     bytes32 public constant GUARDIAN_ROLE = 0x55435dd261a4b9b3364963f7738a7a662ad9c84396d64be3365284bb7f0a5041;
+    /// @notice Rewards supplier role keccak256("REWARDS_SUPPLIER_ROLE")
+    bytes32 public constant REWARDS_SUPPLIER_ROLE = 0x1e153db16d10d4d642e290a54b15e41102f4abaeaa9448b47be3321a9c05a16c;
 
     modifier onlyAdminOrGuardian() {
         if (!hasRole(GUARDIAN_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
@@ -103,7 +105,7 @@ contract StakeManager is
     }
 
     modifier onlyRewardsSupplier() {
-        if (msg.sender != rewardsSupplier) {
+        if (!hasRole(REWARDS_SUPPLIER_ROLE, msg.sender)) {
             revert StakeManager__Unauthorized();
         }
         _;
@@ -137,15 +139,6 @@ contract StakeManager is
 
         STAKING_TOKEN = IERC20(_stakingToken);
         lastMPUpdatedTime = block.timestamp;
-    }
-
-    /**
-     * @notice Allows the owner to set the rewards supplier.
-     * @dev The supplier is going to be the `Karma` token.
-     * @param _rewardsSupplier The address of the rewards supplier.
-     */
-    function setRewardsSupplier(address _rewardsSupplier) external onlyRole(DEFAULT_ADMIN_ROLE) onlyNotEmergencyMode {
-        rewardsSupplier = _rewardsSupplier;
     }
 
     /**
